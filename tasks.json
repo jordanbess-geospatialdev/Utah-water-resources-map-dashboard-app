@@ -553,7 +553,8 @@
         "WD-025-R2"
       ],
       "release": "R2",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "c9cebfa6868e8cab558326ae99a2e12c3d20060c"
     }
   ]
 }
