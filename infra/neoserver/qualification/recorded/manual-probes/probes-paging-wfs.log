@@ -1,0 +1,37 @@
+== 4. items paging probe with limit=1 (EXPECTATIONS item 6) ==
+GET items?limit=1 -> 200
+next link: http://localhost:9000/workspaces/water-public/ogc/collections/stations/items?limit=1&offset=1
+GET /workspaces/water-public/ogc/collections/stations/items?limit=1&offset=1 -> 200
+next link: http://localhost:9000/workspaces/water-public/ogc/collections/stations/items?limit=1&offset=2
+GET /workspaces/water-public/ogc/collections/stations/items?limit=1&offset=2 -> 200
+page1: features=1 ids=1 numberMatched=3 next=true
+page2: features=1 ids=2 numberMatched=3 next=true
+page3: features=1 ids=3 numberMatched=3 next=false
+
+== 5. WFS BBOX SRSNAME axis probe (EXPECTATIONS item 4) ==
+GetFeature BBOX=-112.3,41.6,-111.8,41.8&SRSNAME=CRS:84 -> 200 application/json; charset=utf-8
+GetFeature BBOX=-112.3,41.6,-111.8,41.8&SRSNAME=urn:ogc:def:crs:EPSG::4326 -> 200 application/json; charset=utf-8
+wfs-bbox-crs84.json: features=3 first coords=[-112.1965,41.6337]
+wfs-bbox-urn4326.json: features=3 first coords=[-112.1965,41.6337]
+== 6. WMS GetFeatureInfo at rendered station pixel (T-05 baseline row) ==
+GetFeatureInfo I=109 J=7 INFO_FORMAT=application/geojson -> 400 text/xml
+<?xml version="1.0" encoding="UTF-8"?>
+<ServiceExceptionReport version="1.3.0" xmlns="http://www.opengis.net/ogc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/ogc http://schemas.opengis.net/wms/1.3.0/exceptions_1_3_0.xsd">
+  <ServiceException code="InvalidFormat">Invalid INFO_FORMAT: application/geojson</ServiceException>
+</ServiceExceptionReport>
+GetFeatureInfo INFO_FORMAT=text/plain -> 200 text/plain
+No features found at this location.
+GetFeatureInfo I=94 J=19 (computed station pixel for sta-bear-corinne) -> 400
+<?xml version="1.0" encoding="UTF-8"?>
+<ServiceExceptionReport version="1.3.0" xmlns="http://www.opengis.net/ogc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/ogc http://schemas.opengis.net/wms/1.3.0/exceptions_1_3_0.xsd">
+  <ServiceException code="MissingParameterValue">STYLES parameter is required</ServiceException>
+</ServiceExceptionReport>GetFeatureInfo I=94 J=19 +STYLES= -> 200 text/plain
+Layer: stations
+  display_name: Bear River near Corinne
+  status: active
+  station_id: sta-bear-corinne
+== 7. WFS Transaction denial probe (EXPECTATIONS item 4) ==
+POST /wfs Transaction (viewer key) -> 403 text/plain; charset=utf-8
+forbidden: operation is not granted
+
+POST /wfs Transaction (anonymous) -> 401

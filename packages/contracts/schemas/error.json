@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/error.json",
+  "title": "Problem",
+  "description": "Typed error payload shared by every /api/v1 route (RFC 9457-aligned). code is stable and machine-readable; message is human-readable and may change between versions. Status mapping: 400/422 malformed input, 401 missing or expired identity, 403 permitted object with forbidden operation, 404 used to avoid disclosing hidden object existence, 409 idempotency/content conflict, 412 stale If-Match, 429 rate limit with retry information, 503 unavailable dependency. A consistent hidden-object policy means 403 and 404 are chosen deliberately, never accidentally.",
+  "type": "object",
+  "required": ["code", "message"],
+  "properties": {
+    "type": { "type": "string", "description": "URI reference identifying the problem class." },
+    "title": { "type": "string", "description": "Short human title for the status class." },
+    "status": { "type": "integer", "description": "HTTP status code mirrored by the response." },
+    "code": { "type": "string", "enum": ["INVALID_REQUEST", "VALIDATION_FAILED", "UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "IDEMPOTENCY_CONFLICT", "PRECONDITION_FAILED", "RATE_LIMITED", "DEPENDENCY_UNAVAILABLE", "INTERNAL_ERROR"] },
+    "message": { "type": "string", "description": "Human-readable explanation; never includes credentials, tokens or restricted record payloads." },
+    "requestId": { "type": "string", "description": "Correlates with response headers and logs." },
+    "retryAfterSeconds": { "type": "integer", "description": "Present on RATE_LIMITED (429)." },
+    "details": { "type": "object", "description": "Structured field- or row-level detail for 400/422 responses." }
+  }
+}

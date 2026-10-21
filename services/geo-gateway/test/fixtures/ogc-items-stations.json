@@ -1,0 +1,24 @@
+{
+  "$note": "SYNTHETIC SAMPLE - authored fixture, NOT a capture from a real NeoServer. OGC API - Features items page modeled on the shape the qualification stack is expected to serve for /workspaces/water-public/ogc/collections/stations/items. Geometry coordinates are the fixture-world control coordinates (Bear River near Corinne at 41.6337, -112.1965; Hyrum diversion public at 41.6295, -111.8524) in GeoJSON lon,lat order - the axis-order control point. The 'next' link exercises paging; NO private fields (no gateCode, no wiringNotes, no owner contacts) appear anywhere.",
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "sta-bear-corinne",
+      "geometry": { "type": "Point", "coordinates": [-112.1965, 41.6337] },
+      "properties": { "displayName": "Bear River near Corinne", "status": "active", "telemetry": "telemetered" }
+    },
+    {
+      "type": "Feature",
+      "id": "sta-hyrum-diversion-public",
+      "geometry": { "type": "Point", "coordinates": [-111.8524, 41.6295] },
+      "properties": { "displayName": "Hyrum Diversion (public)", "status": "active", "telemetry": "manual" }
+    }
+  ],
+  "links": [
+    { "rel": "self", "href": "http://neo.internal:9000/workspaces/water-public/ogc/collections/stations/items?limit=2", "type": "application/geo+json" },
+    { "rel": "next", "href": "/workspaces/water-public/ogc/collections/stations/items?limit=2&offset=2", "type": "application/geo+json" }
+  ],
+  "numberReturned": 2,
+  "timeStamp": "2026-05-15T12:00:00Z"
+}

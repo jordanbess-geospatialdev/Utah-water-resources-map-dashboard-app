@@ -1,0 +1,547 @@
+{
+  "schema_version": "1.0",
+  "note": "Orchestrator single-writer task registry. Generated from the delivery backlog (output/specifications/backlog.json); the backlog remains the source of truth for acceptance criteria and evidence.",
+  "generated_from": "output/specifications/backlog.json",
+  "updated": "2026-10-21",
+  "tasks": [
+    {
+      "id": "WD-001",
+      "title": "Establish source and decision baseline",
+      "owner": "product_traceability",
+      "phase": "P0",
+      "write_scopes": [
+        "docs/product/**",
+        "docs/traceability/**"
+      ],
+      "depends_on": [],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "2cc22b786dcbf5a3b609490033d34b0ea0be7eb1"
+    },
+    {
+      "id": "WD-002",
+      "title": "Version contracts and deterministic fixture set",
+      "owner": "contract_data",
+      "phase": "P0",
+      "write_scopes": [
+        "packages/contracts/**",
+        "fixtures/contracts/**"
+      ],
+      "depends_on": [
+        "WD-001"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "328629ef070ad04ef387017820e617345f947374"
+    },
+    {
+      "id": "WD-003",
+      "title": "Build safe spatial publication and time-series read model",
+      "owner": "contract_data",
+      "phase": "P0",
+      "write_scopes": [
+        "database/**",
+        "fixtures/database/**"
+      ],
+      "depends_on": [
+        "WD-002"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "0fe6c371dc36f15a97768fd6d672799abf9fc981"
+    },
+    {
+      "id": "WD-004",
+      "title": "Implement server identity and entitlements",
+      "owner": "identity_policy",
+      "phase": "P0",
+      "write_scopes": [
+        "services/api/src/auth/**",
+        "packages/policy/**"
+      ],
+      "depends_on": [
+        "WD-002"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "d399cc372969e0239a6c4b5dfaf856b4d6abdc67"
+    },
+    {
+      "id": "WD-005",
+      "title": "Qualify NeoServer protocols and authorized gateway",
+      "owner": "spatial_integration",
+      "phase": "P0",
+      "write_scopes": [
+        "services/geo-gateway/**",
+        "infra/neoserver/**"
+      ],
+      "depends_on": [
+        "WD-003",
+        "WD-004"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "48e5eacb4e003186a95b875f7b77ea6b8a1c25e8"
+    },
+    {
+      "id": "WD-006",
+      "title": "Deliver GeoLibre role-based prototype shell",
+      "owner": "persona_ui",
+      "phase": "P1",
+      "write_scopes": [
+        "apps/web/src/shell/**",
+        "apps/web/src/components/**",
+        "apps/web/src/map/shell/**",
+        "apps/web/tests/**"
+      ],
+      "depends_on": [
+        "WD-002"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "scope_note": "apps/web/tests/** added 2026-10-21 by orchestrator: prototype test port target for the app package (tests/** root remains QA-owned).",
+      "merged_commit": "482c49593c63c0293008d90b6a4f799c8b3b87a9"
+    },
+    {
+      "id": "WD-007",
+      "title": "Implement public map discovery and shareable state",
+      "owner": "spatial_integration",
+      "phase": "P1",
+      "write_scopes": [
+        "apps/web/src/map/discovery/**",
+        "apps/web/src/features/discovery/**"
+      ],
+      "depends_on": [
+        "WD-005",
+        "WD-006"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "fd4fc234fbc6a8886a40b31a8a87d40c150f1f92"
+    },
+    {
+      "id": "WD-008",
+      "title": "Implement time-series views comparisons and export",
+      "owner": "persona_ui",
+      "phase": "P1",
+      "write_scopes": [
+        "apps/web/src/features/series/**",
+        "services/api/src/series/**",
+        "services/api/src/exports/**"
+      ],
+      "depends_on": [
+        "WD-003",
+        "WD-007"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "4c54184ca986eafa71aa7d055e3c136cd08f39f9"
+    },
+    {
+      "id": "WD-009",
+      "title": "Implement assigned operational workspaces",
+      "owner": "persona_ui",
+      "phase": "P2",
+      "write_scopes": [
+        "apps/web/src/features/operations/**",
+        "apps/web/src/features/favorites/**"
+      ],
+      "depends_on": [
+        "WD-004",
+        "WD-008"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "9bba581fe0f49700df132a6a4dfdf7e9e0722d80"
+    },
+    {
+      "id": "WD-010",
+      "title": "Implement readings bulk paste and site setup",
+      "owner": "workflow_sync",
+      "phase": "P2",
+      "write_scopes": [
+        "services/api/src/workflows/readings/**",
+        "apps/web/src/features/data-entry/**",
+        "services/api/src/workflows/sites/**"
+      ],
+      "depends_on": [
+        "WD-003",
+        "WD-009"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "f07a7424a85d177c896f08b36bc2439a520d593c"
+    },
+    {
+      "id": "WD-011",
+      "title": "Implement best-available corrections qualifiers and point audit",
+      "owner": "workflow_sync",
+      "phase": "P2",
+      "write_scopes": [
+        "services/api/src/workflows/revisions/**",
+        "apps/web/src/features/quality-history/**"
+      ],
+      "depends_on": [
+        "WD-003",
+        "WD-004"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "a1c6e87eed27380f6a00da803c4f43b87aab1850"
+    },
+    {
+      "id": "WD-012",
+      "title": "Implement online field visits and private attachments",
+      "owner": "workflow_sync",
+      "phase": "P2",
+      "write_scopes": [
+        "services/api/src/workflows/visits/**",
+        "apps/web/src/features/visits/**"
+      ],
+      "depends_on": [
+        "WD-010",
+        "WD-011"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "eeff87933f20552f7ed5e7dc502d15ef4cbc0a68"
+    },
+    {
+      "id": "WD-013",
+      "title": "Implement diagnostics QC rules and recurrent issue views",
+      "owner": "workflow_sync",
+      "phase": "P3",
+      "write_scopes": [
+        "services/api/src/workflows/qc/**",
+        "apps/web/src/features/quality/**"
+      ],
+      "depends_on": [
+        "WD-011",
+        "WD-014"
+      ],
+      "release": "MVP",
+      "status": "in_progress"
+    },
+    {
+      "id": "WD-014",
+      "title": "Implement steward governance and connection health",
+      "owner": "workflow_sync",
+      "phase": "P3",
+      "write_scopes": [
+        "services/api/src/workflows/stewardship/**",
+        "apps/web/src/features/stewardship/**"
+      ],
+      "depends_on": [
+        "WD-003",
+        "WD-004",
+        "WD-009"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "7acb9e71621864082ca6c740b09058d239c81886"
+    },
+    {
+      "id": "WD-015",
+      "title": "Implement scoped alerts and digest schedules",
+      "owner": "workflow_sync",
+      "phase": "P3",
+      "write_scopes": [
+        "services/api/src/workflows/notifications/**",
+        "apps/web/src/features/notifications/**"
+      ],
+      "depends_on": [
+        "WD-009",
+        "WD-013",
+        "WD-014"
+      ],
+      "release": "MVP",
+      "status": "planned"
+    },
+    {
+      "id": "WD-016",
+      "title": "Implement researcher tokens and documented API",
+      "owner": "identity_policy",
+      "phase": "P1",
+      "write_scopes": [
+        "services/api/src/tokens/**",
+        "docs/api/**",
+        "apps/web/src/features/developer-access/**"
+      ],
+      "depends_on": [
+        "WD-004",
+        "WD-008"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "cb292021b3c708aef6e42979a6d6aaf424ceb540"
+    },
+    {
+      "id": "WD-017",
+      "title": "Implement water supplier draft submission and PDF",
+      "owner": "workflow_sync",
+      "phase": "P4",
+      "write_scopes": [
+        "services/api/src/workflows/supplier-report/**",
+        "apps/web/src/features/supplier-report/**"
+      ],
+      "depends_on": [
+        "WD-010",
+        "WD-011",
+        "WD-012"
+      ],
+      "release": "R2",
+      "status": "planned"
+    },
+    {
+      "id": "WD-018",
+      "title": "Implement public and policy summaries",
+      "owner": "persona_ui",
+      "phase": "P3",
+      "write_scopes": [
+        "apps/web/src/features/overview/**",
+        "services/api/src/summaries/**"
+      ],
+      "depends_on": [
+        "WD-007",
+        "WD-008"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "e84558eefc54637d22a0e8ad163195ca55561e54"
+    },
+    {
+      "id": "WD-019",
+      "title": "Implement validated natural-language filters",
+      "owner": "persona_ui",
+      "phase": "P1",
+      "write_scopes": [
+        "services/api/src/ai/filter-parser/**",
+        "apps/web/src/features/ai-search/**",
+        "fixtures/ai/**"
+      ],
+      "depends_on": [
+        "WD-002",
+        "WD-007"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "f67a8e695ab8e50d5de606770b447c4692dc774c"
+    },
+    {
+      "id": "WD-020",
+      "title": "Implement support shared context and onboarding",
+      "owner": "product_traceability",
+      "phase": "P3",
+      "write_scopes": [
+        "docs/training/**",
+        "apps/web/src/features/help/**",
+        "services/api/src/support/**"
+      ],
+      "depends_on": [
+        "WD-007",
+        "WD-009"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "6b9486877e1e482038b5504ae1a9444259c0399b"
+    },
+    {
+      "id": "WD-021",
+      "title": "Run independent MVP system qualification",
+      "owner": "qa_accessibility",
+      "phase": "P3",
+      "write_scopes": [
+        "tests/**",
+        "docs/verification/**"
+      ],
+      "depends_on": [
+        "WD-005",
+        "WD-008",
+        "WD-010",
+        "WD-011",
+        "WD-012",
+        "WD-013",
+        "WD-014",
+        "WD-015",
+        "WD-016",
+        "WD-018",
+        "WD-019",
+        "WD-020",
+        "WD-024",
+        "WD-025"
+      ],
+      "release": "MVP",
+      "status": "planned"
+    },
+    {
+      "id": "WD-022",
+      "title": "Accept MVP UAT and production readiness",
+      "owner": "orchestrator",
+      "phase": "P3",
+      "write_scopes": [
+        "docs/releases/**",
+        "docs/uat/**"
+      ],
+      "depends_on": [
+        "WD-020",
+        "WD-021",
+        "WD-025"
+      ],
+      "release": "MVP",
+      "status": "planned"
+    },
+    {
+      "id": "WD-023",
+      "title": "Discover advanced site and right-network integrations",
+      "owner": "orchestrator",
+      "phase": "P4",
+      "write_scopes": [
+        "docs/extensions/**"
+      ],
+      "depends_on": [
+        "WD-022"
+      ],
+      "release": "Discovery",
+      "status": "planned"
+    },
+    {
+      "id": "WD-024",
+      "title": "Implement reproducible runtime monitoring and recovery",
+      "owner": "platform_operations",
+      "phase": "P0",
+      "write_scopes": [
+        ".github/workflows/**",
+        "infra/runtime/**",
+        "ops/**"
+      ],
+      "depends_on": [
+        "WD-003",
+        "WD-005"
+      ],
+      "release": "MVP",
+      "status": "completed",
+      "merged_commit": "4ff16e478d06ec054b8624433704842fcc4546a3"
+    },
+    {
+      "id": "WD-025",
+      "title": "Implement annual distribution report generation",
+      "owner": "workflow_sync",
+      "phase": "P3",
+      "write_scopes": [
+        "services/api/src/workflows/distribution-report/**",
+        "apps/web/src/features/distribution-report/**"
+      ],
+      "depends_on": [
+        "WD-008",
+        "WD-010",
+        "WD-011"
+      ],
+      "release": "MVP",
+      "status": "planned"
+    },
+    {
+      "id": "WD-011-R2",
+      "title": "Implement versioned rating curves and shifts",
+      "owner": "workflow_sync",
+      "phase": "P4",
+      "write_scopes": [
+        "services/api/src/workflows/rating-curves/**",
+        "apps/web/src/features/rating-curves/**"
+      ],
+      "depends_on": [
+        "WD-011"
+      ],
+      "release": "R2",
+      "status": "planned"
+    },
+    {
+      "id": "WD-012-R2",
+      "title": "Implement offline outbox sync and asset transfers",
+      "owner": "workflow_sync",
+      "phase": "P4",
+      "write_scopes": [
+        "apps/web/src/offline/**",
+        "services/api/src/workflows/sync/**",
+        "apps/web/src/features/asset-transfers/**"
+      ],
+      "depends_on": [
+        "WD-010",
+        "WD-011",
+        "WD-012"
+      ],
+      "release": "R2",
+      "status": "planned"
+    },
+    {
+      "id": "WD-013-R2",
+      "title": "Implement recurring correction trends and curve diagnostics",
+      "owner": "workflow_sync",
+      "phase": "P4",
+      "write_scopes": [
+        "apps/web/src/features/recurring-quality/**",
+        "services/api/src/quality-trends/**"
+      ],
+      "depends_on": [
+        "WD-013",
+        "WD-011-R2"
+      ],
+      "release": "R2",
+      "status": "planned"
+    },
+    {
+      "id": "WD-023-R2",
+      "title": "Scope and implement approved as-of voice and WCAT extensions",
+      "owner": "orchestrator",
+      "phase": "P4",
+      "write_scopes": [
+        "docs/extensions/r2/**",
+        "services/integrations/r2/**",
+        "apps/web/src/features/r2-extensions/**"
+      ],
+      "depends_on": [
+        "WD-022",
+        "WD-011",
+        "WD-016"
+      ],
+      "release": "R2",
+      "status": "planned"
+    },
+    {
+      "id": "WD-025-R2",
+      "title": "Implement decision snapshots finalized reports and flexible periods",
+      "owner": "workflow_sync",
+      "phase": "P4",
+      "write_scopes": [
+        "services/api/src/workflows/accounting-snapshots/**",
+        "apps/web/src/features/accounting-snapshots/**"
+      ],
+      "depends_on": [
+        "WD-025",
+        "WD-011"
+      ],
+      "release": "R2",
+      "status": "planned"
+    },
+    {
+      "id": "WD-026",
+      "title": "Independently qualify and accept R2",
+      "owner": "qa_accessibility",
+      "phase": "P4",
+      "write_scopes": [
+        "tests/r2/**",
+        "docs/verification/r2/**"
+      ],
+      "depends_on": [
+        "WD-022",
+        "WD-011-R2",
+        "WD-012-R2",
+        "WD-013-R2",
+        "WD-017",
+        "WD-023-R2",
+        "WD-025-R2"
+      ],
+      "release": "R2",
+      "status": "planned"
+    }
+  ]
+}

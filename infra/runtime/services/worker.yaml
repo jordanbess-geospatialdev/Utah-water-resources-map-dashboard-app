@@ -1,0 +1,97 @@
+# =============================================================================
+# WD-024 runtime definition — worker service (outbox / QC / export / publish)
+#
+# TARGET SHAPE (authored; NOT applied). See infra/runtime/README.md for the
+# qualification checklist required before any apply. Consumes the transactional
+# outbox (ADR-10): cache refresh, QC rules, exports, notifications and
+# publication workers claim committed outbox items; an external cache-refresh
+# failure retries WITHOUT repeating the domain write.
+#
+# SECRETS are placeholder references only; IMAGES resolve from the release
+# manifest digest. Numeric caps are initial proposals pending the operational
+# targets ratification (same as backend.yaml).
+# =============================================================================
+apiVersion: utah-water.runtime/v1
+kind: WorkerService
+metadata:
+  name: utah-water-worker
+  description: >-
+    Durable-queue workers (QC, export, notification, NeoServer publication
+    cache refresh) driven by the transactional outbox. Equivalent to the
+    "Jobs" row of the Google Cloud deployment table (Cloud Run jobs/worker
+    service or existing job platform): least-privilege identity, retries,
+    no public ingress.
+  labels:
+    app.kubernetes.io/part-of: utah-water-dashboard
+    utah-water/service-class: stateless-worker
+spec:
+  image: ${RELEASE_IMAGE_WORKER_DIGEST}
+  # --- scaling (workers; bounded claim concurrency) --------------------------
+  minInstances: 0
+  maxInstances: 4
+  # One claim per concurrency slot: a worker claim is a long unit of work
+  # (export render, cache refresh), so parallelism is bounded by instances.
+  concurrency: 1
+  timeoutSeconds: 540
+  ingress: none
+  vpcEgress:
+    connectorRef: ${VPC_EGRESS_CONNECTOR_REF}
+    egressMode: private-ranges-only
+  # --- database pool caps (worker DB account, never the migration account) ---
+  connectionPools:
+    worker:
+      maxConnections: 10
+      minConnections: 1
+      acquireTimeoutMs: 5000
+      statementTimeoutMs: 60000
+      idleTimeoutMs: 30000
+      secretRef: ${SECRET_REF:database-worker-url}
+  # --- outbox queue caps (durable queue is PostgreSQL; these bound claims) ---
+  queueCaps:
+    outboxClaim:
+      description: >-
+        Bounded claim batch per polling interval; attempts are capped and
+        surfaced (FR-014: health distinguishes failed connection from failed
+        tasks, digest links to failed tasks first).
+      maxBatch: 10
+      maxAttempts: 5
+      retryBackoffBaseMs: 1000
+      retryBackoffMaxMs: 300000
+      poisonQueue: true
+    exportJobs:
+      description: >-
+        Bounded concurrent export renders with explicit row/time limits and
+        expiring authorized downloads (02-technical-specification.md exports).
+      maxConcurrent: 4
+      maxRowsPerJob: 500000
+      maxWallClockMs: 540000
+    publicationRefresh:
+      description: NeoServer cache refresh after committed public revision.
+      maxConcurrent: 2
+      stalenessAlertMs: 300000
+  # --- external-store reach (private object storage via backend proxy) -------
+  objectStorage:
+    attachmentsBucketRef: ${SECRET_REF:attachment-bucket-ref}
+  observability:
+    requestIdPropagation: true
+    logRedaction: nfr-009
+    metrics:
+      - taskFailure
+      - exportQueueDepth
+      - ingestionLag
+      - cacheRevisionLag
+      - syncConflicts
+      - auditLoss
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: DATABASE_WORKER_URL
+      valueFrom: ${SECRET_REF:database-worker-url}
+    - name: NEOSERVER_INTERNAL_URL
+      valueFrom: ${SECRET_REF:neoserver-internal-url}
+    - name: NEOSERVER_SCOPED_CREDENTIAL
+      valueFrom: ${SECRET_REF:neoserver-scoped-credential}
+    - name: ATTACHMENT_BUCKET_REF
+      valueFrom: ${SECRET_REF:attachment-bucket-ref}
+    - name: NOTIFICATION_SENDER_REF
+      valueFrom: ${SECRET_REF:notification-sender-ref}

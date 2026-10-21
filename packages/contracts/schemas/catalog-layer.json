@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/catalog-layer.json",
+  "title": "CatalogLayer",
+  "description": "One permitted layer in the authorized catalog returned by GET /catalog. Layers describe spatial publication transports (NeoServer OGC endpoints via the same-origin gateway) plus domain transports, with an explicit property projection: only fields listed in propertyProjection may appear in features, tiles and exports for that layer. A layer is delivered only when allow_public_read or allow_protected holds for the caller.",
+  "type": "object",
+  "required": ["id", "name", "layerType", "sourceUrl", "visibility", "propertyProjection", "dataRevision"],
+  "properties": {
+    "id": { "type": "string", "description": "Stable layer identifier used as the GeoLibre layer id." },
+    "name": { "type": "string", "description": "Display name." },
+    "layerType": { "type": "string", "enum": ["vector-tiles", "ogc-features", "wms", "wfs", "domain-json"], "description": "Transport family. MVT paths are z/y/x; WMS overlays prefer EPSG:3857; see the technical specification's transport table." },
+    "sourceUrl": { "type": "string", "description": "Same-origin gateway route (allowlisted path), never a raw upstream NeoServer URL." },
+    "visibility": { "type": "string", "enum": ["public", "cohort", "internal"], "description": "Publication class. Cohort layers require every member to be entitled to all published fields." },
+    "propertyProjection": { "type": "array", "items": { "type": "string" }, "description": "Closed allowlist of fields exposed by this layer. Gate codes, internal notes, contacts and credentials can never appear here." },
+    "dataRevision": { "type": "string", "description": "Publication revision token; changes when the backing publication view is refreshed." },
+    "attribution": { "type": "string" },
+    "styles": { "type": "object", "description": "Layer style hints (opacity, symbols, color ramps) keyed by style id." }
+  }
+}

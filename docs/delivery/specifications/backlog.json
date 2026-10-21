@@ -1,0 +1,2075 @@
+{
+  "schema_version": "1.0",
+  "project": "Utah Water Measurement Data Dashboard",
+  "created_date": "2026-10-21",
+  "status_note": "Production tasks are planned. Prototype work and tests must be tracked separately until evidence satisfies these acceptance criteria. Kickoff 2026-10-21: production monorepo bootstrapped at C:/TMG/Client_work/Utah_WaterResources_MapApp/utah-water-dashboard per ADR-13 (code moved off OneDrive); WD-001 and WD-002 merged into integration with gates and independent review; WD-003/WD-004/WD-006 dispatched. Wave 1 complete: WD-003/WD-004/WD-006 all merged; full root suite green (contracts 1212 assertions, database 5/5, policy 26/26, web 32/32). Next wave dispatched: WD-005, WD-011. Wave 2 complete: WD-005 and WD-011 merged after usage-limit recovery; root suite now six packages green (contracts 1212, database 5/5, policy 26/26, web 45/45, api 20/20, geo-gateway 84/84). Wave 3 dispatched: WD-007, WD-024. P0 COMPLETE: WD-001..WD-005 + WD-024 merged. Live T-05 NeoServer qualification dispatched on test branch after Docker became available. T-05 live NeoServer qualification EXECUTED (first live protocol evidence; DR-009 production database inventory still open). PHASE P1 COMPLETE (WD-006/007/008/016/019). P2 continues with WD-009 dispatched. WD-009 merged (P2 progressing). Wave 5 dispatched: WD-010, WD-018, WD-020. Wave 5 complete (WD-010/018/020 merged; 16 of 31). WD-012 dispatched; WD-014/WD-025 queued in the same lane. WD-012 merged (17 of 31). Endgame sequence confirmed: WD-014 -> WD-013 -> WD-015 -> WD-025 -> WD-021 -> WD-022; WD-017 is P4/R2 and deferred per release policy.",
+  "requirement_registry": "01-product-requirements.md",
+  "release_policy": "Tasks now separate MVP, R2 and Discovery. MVP qualification WD-021 and UAT WD-022 have no R2/Discovery task dependency. Suffixed -R2 tasks and WD-026 qualify the deferred R2 release; unresolved Discovery never blocks MVP.",
+  "plan": "04-ai-development-and-testing.md",
+  "source_registry": "../../Updated 2026 User-Centric_Design_Requirements_for_the_Water_Measurement_Data_Dashboard.pdf",
+  "execution_policy": {
+    "max_concurrent_workers": 3,
+    "orchestrator_reserved": true,
+    "single_writer_per_file": true,
+    "independent_security_review": true,
+    "synthetic_data_only": true,
+    "production_deployment_requires_explicit_authorization": true,
+    "live_database_access_requires_explicit_authorization": true,
+    "destructive_raw_data_deletion_requires_explicit_authorization": true,
+    "one_worktree_per_task": true,
+    "one_branch_per_task": true,
+    "branch_strategy": "feat/<WD-ID>-<slug> branches merge into protected integration via PR only; orchestrator is sole merger and sole backlog status writer. See 04-ai-development-and-testing.md.",
+    "shared_file_single_writers": {
+      "pnpm_lock": "chore/deps branches by orchestrator",
+      "migrations": "contract_data proposes, orchestrator renumbers at merge",
+      "contracts": "contract/vN branches accepted by orchestrator",
+      "backlog_status": "orchestrator primary clone only"
+    }
+  },
+  "phases": {
+    "P0": "Qualification and foundation",
+    "P1": "Public and read-only users",
+    "P2": "Operational field work",
+    "P3": "Governance reports and acceptance",
+    "P4": "Separately scoped extensions"
+  },
+  "tasks": [
+    {
+      "id": "WD-001",
+      "title": "Establish source and decision baseline",
+      "phase": "P0",
+      "status": "completed",
+      "owner": "product_traceability",
+      "depends_on": [],
+      "write_scopes": [
+        "docs/product/**",
+        "docs/traceability/**"
+      ],
+      "requirement_ids": [
+        "FR-001",
+        "FR-010",
+        "FR-039",
+        "FR-044",
+        "FR-050",
+        "FR-051",
+        "FR-067",
+        "FR-068"
+      ],
+      "test_ids": [
+        "T-01"
+      ],
+      "acceptance_criteria": [
+        "Reconcile six PDF personas with six supplied Figma flows, including Donna node 81:365 on page 81:364; record exact source pages and accessible nodes.",
+        "Capture unresolved ownership, scope, data classifications, identity provider and actual GCP database/extension inventory; do not fabricate Figma details."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "C:/TMG/Client_work/Utah_WaterResources_MapApp/utah-water-dashboard integration commit 2cc22b7 (squash of branch feat/WD-001-source-baseline ddc5d24)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-001 passed: scope/trailers/migrations/lockfile",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review; snapshots verified byte-identical to delivery specifications; 18 open decisions registered; Figma access remains pending (no visual claims)",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-001",
+        "AT-FR-010",
+        "AT-FR-039",
+        "AT-FR-044",
+        "AT-FR-050",
+        "AT-FR-051",
+        "AT-FR-067",
+        "AT-FR-068"
+      ],
+      "release_scopes": {
+        "FR-001": "MVP",
+        "FR-010": "MVP",
+        "FR-039": "MVP",
+        "FR-044": "R2",
+        "FR-050": "Discovery",
+        "FR-051": "R2",
+        "FR-067": "Discovery",
+        "FR-068": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-002",
+      "title": "Version contracts and deterministic fixture set",
+      "phase": "P0",
+      "status": "completed",
+      "owner": "contract_data",
+      "depends_on": [
+        "WD-001"
+      ],
+      "write_scopes": [
+        "packages/contracts/**",
+        "fixtures/contracts/**"
+      ],
+      "requirement_ids": [
+        "FR-002",
+        "FR-010",
+        "FR-033",
+        "FR-040",
+        "FR-065",
+        "FR-066",
+        "NFR-008"
+      ],
+      "test_ids": [
+        "T-01",
+        "T-04"
+      ],
+      "acceptance_criteria": [
+        "Commit OpenAPI and JSON schemas for catalog, sites, observations, revisions, entitlements and async jobs.",
+        "Publish fixed clock/seed fixtures with two owners, two systems, public/private fields and missing/irregular series; consumers agree a contract hash."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "C:/TMG/Client_work/Utah_WaterResources_MapApp/utah-water-dashboard integration commit 328629e (squash of branch feat/WD-002-contracts-fixtures edecd86)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-002 passed; checker reproduced: 22 operations, 8 schemas, 1212 assertions, 9 contract hashes",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review; route table verified complete against technical specification; fixture invariants (shared display name, public gate-code station, DST offsets) verified",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-002",
+        "AT-FR-010",
+        "AT-FR-033",
+        "AT-FR-040",
+        "AT-FR-065",
+        "AT-FR-066",
+        "AT-NFR-008"
+      ],
+      "release_scopes": {
+        "FR-002": "MVP",
+        "FR-010": "MVP",
+        "FR-033": "MVP",
+        "FR-040": "MVP",
+        "FR-065": "MVP",
+        "FR-066": "MVP",
+        "NFR-008": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-003",
+      "title": "Build safe spatial publication and time-series read model",
+      "phase": "P0",
+      "status": "completed",
+      "owner": "contract_data",
+      "depends_on": [
+        "WD-002"
+      ],
+      "write_scopes": [
+        "database/**",
+        "fixtures/database/**"
+      ],
+      "requirement_ids": [
+        "FR-002",
+        "FR-012",
+        "FR-033",
+        "FR-039",
+        "FR-040",
+        "FR-060",
+        "FR-066",
+        "NFR-007"
+      ],
+      "test_ids": [
+        "T-04",
+        "T-06"
+      ],
+      "acceptance_criteria": [
+        "Inventory PostgreSQL/PostGIS/TimescaleDB versions in approved environment; choose Cloud SQL-compatible or confirmed Timescale path explicitly.",
+        "Use SELECT-only NeoServer publication views with stable IDs and safe properties; prove private fields absent and measure representative query plans."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent contract_data on branch feat/WD-003-database-publication from integration a612050",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration commit 0fe6c37 (squash of branch feat/WD-003-database-publication fcbc2f8)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-003 passed; database/check.mjs reproduced independently 5/5",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: publication view allowlist and original-immutability triggers verified in DDL",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "qualification-pending",
+          "ref": "all SQL authored but not executed: DR-009 database inventory (Cloud SQL vs self-managed, PostGIS/TimescaleDB) gates execution of DDL, proofs and plans",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-002",
+        "AT-FR-012",
+        "AT-FR-033",
+        "AT-FR-039",
+        "AT-FR-040",
+        "AT-FR-060",
+        "AT-FR-066",
+        "AT-NFR-007"
+      ],
+      "release_scopes": {
+        "FR-002": "MVP",
+        "FR-012": "MVP",
+        "FR-033": "MVP",
+        "FR-039": "MVP",
+        "FR-040": "MVP",
+        "FR-060": "MVP",
+        "FR-066": "MVP",
+        "NFR-007": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-004",
+      "title": "Implement server identity and entitlements",
+      "phase": "P0",
+      "status": "completed",
+      "owner": "identity_policy",
+      "depends_on": [
+        "WD-002"
+      ],
+      "write_scopes": [
+        "services/api/src/auth/**",
+        "packages/policy/**"
+      ],
+      "requirement_ids": [
+        "FR-010",
+        "FR-011",
+        "FR-019",
+        "FR-031",
+        "FR-049",
+        "FR-064",
+        "NFR-006"
+      ],
+      "test_ids": [
+        "T-02",
+        "T-03",
+        "T-08"
+      ],
+      "acceptance_criteria": [
+        "Resolve institutional identities to server grants; separate persona from action, assignment and visibility.",
+        "Deny cross-owner/cross-system and direct-URL requests; enforce revocation/expiry and preserve historic actor references."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent identity_policy on branch feat/WD-004-identity-policy from integration a612050",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration commit d399cc3 (squash of branch feat/WD-004-identity-policy d443543)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-004 passed; T-02 suite reproduced independently: 26/26",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: deputy statewide structural denial, revocation precedence and public-field projection verified against technical specification",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-010",
+        "AT-FR-011",
+        "AT-FR-019",
+        "AT-FR-031",
+        "AT-FR-049",
+        "AT-FR-064",
+        "AT-NFR-006"
+      ],
+      "release_scopes": {
+        "FR-010": "MVP",
+        "FR-011": "MVP",
+        "FR-019": "MVP",
+        "FR-031": "MVP",
+        "FR-049": "MVP",
+        "FR-064": "MVP",
+        "NFR-006": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-005",
+      "title": "Qualify NeoServer protocols and authorized gateway",
+      "phase": "P0",
+      "status": "completed",
+      "owner": "spatial_integration",
+      "depends_on": [
+        "WD-003",
+        "WD-004"
+      ],
+      "write_scopes": [
+        "services/geo-gateway/**",
+        "infra/neoserver/**"
+      ],
+      "requirement_ids": [
+        "FR-001",
+        "FR-004",
+        "FR-010",
+        "FR-049",
+        "FR-065"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-05",
+        "T-08",
+        "T-14"
+      ],
+      "acceptance_criteria": [
+        "Pin release/image digest; capture actual OpenAPI, collections, TileJSON and capabilities.",
+        "Prove Features, explicit WFS GeoJSON, MVT source layer and z/y/x order, WMS CRS/axis correctness; denied cohorts reveal no content.",
+        "Do not expose owner-specific data via a shared NeoServer role; test external-write cache invalidation and one-active-store ownership."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "integration commit (WD-005 squash, branch feat/WD-005-neoserver-gateway 93b83a9)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-005 passed; suite reproduced independently 84/84",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: admin-prefix denial, CRS:84 explicit lon/lat, trusted-base TileJSON resolution verified in source",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "qualification-pending",
+          "ref": "live capture, digest re-verification, WMS axis probe, cache-refresh and single-writer drills pending Docker daemon and registry access",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "live-qualification",
+          "ref": "T-05 EXECUTED 2026-10-21 on disposable digest-pinned stack (merge 6a6d763): 14/14 captures at expected statuses, 13/14 machine checks pass. Tile z/y/x swap detection, WFS lon-first axis, WMS axis probe, paging, cohort 401, zero canary bytes across 39 artifacts, stale-cache confirmation, single-writer lock, backup-recovery identical-sha. One honest fail: NeoServer 0.3.0 emits MVT layer version 1 (upstream; fix/T-05-findings dispatched). Compose defects D1-D3 + capture margin D4 fixed during qualification.",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "fix-merged",
+          "ref": "T-05 findings fixed and PROVEN live: control tile sha 70f3170e byte-identical across restart and full teardown/reseed via deterministic station_key_id; MVT v1/v2 both observed on the pinned digest and accepted by documented policy; suite 87/87",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-001",
+        "AT-FR-004",
+        "AT-FR-010",
+        "AT-FR-049",
+        "AT-FR-065"
+      ],
+      "release_scopes": {
+        "FR-001": "MVP",
+        "FR-004": "MVP",
+        "FR-010": "MVP",
+        "FR-049": "MVP",
+        "FR-065": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-006",
+      "title": "Deliver GeoLibre role-based prototype shell",
+      "phase": "P1",
+      "status": "completed",
+      "owner": "persona_ui",
+      "depends_on": [
+        "WD-002"
+      ],
+      "write_scopes": [
+        "apps/web/src/shell/**",
+        "apps/web/src/components/**",
+        "apps/web/src/map/shell/**"
+      ],
+      "requirement_ids": [
+        "FR-001",
+        "FR-004",
+        "FR-005",
+        "FR-009",
+        "FR-026",
+        "FR-058",
+        "FR-062",
+        "NFR-001",
+        "NFR-002"
+      ],
+      "test_ids": [
+        "T-10",
+        "T-11",
+        "T-16"
+      ],
+      "acceptance_criteria": [
+        "Use actual GeoLibre headless package with MapLibre and an explicit synthetic-data banner; include all six persona entry points.",
+        "Build and policy/adapter tests pass on locked dependencies; map has a table fallback, loading/error/empty states and keyboard controls."
+      ],
+      "evidence": [
+        {
+          "type": "scaffold",
+          "ref": "orchestrator chore/deps-2026-10-21 merged at a5b2d68: apps/web package with locked GeoLibre 3.3.0 / MapLibre 6.15.0 / React 19.1.1 baseline; build verified",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "dispatch",
+          "ref": "background agent persona_ui on branch feat/WD-006-geolibre-shell from integration a612050",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration commit 482c495 (squash of branch feat/WD-006-geolibre-shell 4e9f25e)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-006 passed; suite reproduced independently 32/32; strict tsc + vite build green",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: projection tests prove gate code absent from every public serialization and visible only to in-scope staff; persona never serialized into URLs; real @geolibre/map integration confirmed",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "runtime",
+          "ref": "agent browser smoke test: persona switching, GeoLibre layer rendering, basemap exchange, denied-URL flow; orchestrator did not re-verify browser behavior (loopback restrictions) - browser QA remains a pending gate",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-001",
+        "AT-FR-004",
+        "AT-FR-005",
+        "AT-FR-009",
+        "AT-FR-026",
+        "AT-FR-058",
+        "AT-FR-062",
+        "AT-NFR-001",
+        "AT-NFR-002"
+      ],
+      "release_scopes": {
+        "FR-001": "MVP",
+        "FR-004": "MVP",
+        "FR-005": "MVP",
+        "FR-009": "MVP",
+        "FR-026": "MVP",
+        "FR-058": "MVP",
+        "FR-062": "MVP",
+        "NFR-001": "NFR",
+        "NFR-002": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-007",
+      "title": "Implement public map discovery and shareable state",
+      "phase": "P1",
+      "status": "completed",
+      "owner": "spatial_integration",
+      "depends_on": [
+        "WD-005",
+        "WD-006"
+      ],
+      "write_scopes": [
+        "apps/web/src/map/discovery/**",
+        "apps/web/src/features/discovery/**"
+      ],
+      "requirement_ids": [
+        "FR-001",
+        "FR-002",
+        "FR-004",
+        "FR-008",
+        "FR-035",
+        "FR-060"
+      ],
+      "test_ids": [
+        "T-01",
+        "T-05",
+        "T-10",
+        "T-11"
+      ],
+      "acceptance_criteria": [
+        "Account-free discovery supports approved controlled metadata filters and bounded retrieval.",
+        "Site popup opens profile; share URL reproduces permitted filters/extent without tokens or private identifiers; unknown vocabulary remains inspectable."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent on feat/wd-007 branch from integration 89eca56",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration commit fd4fc23 (squash of branch feat/WD-007-public-discovery 38b07f9)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-007 passed; suites reproduced independently 29/29 + 11/11; web package total 85/85 after glob extension",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: restricted-field leak scan, share-URL hostile-input and omission-with-notice behavior verified",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-001",
+        "AT-FR-002",
+        "AT-FR-004",
+        "AT-FR-008",
+        "AT-FR-035",
+        "AT-FR-060"
+      ],
+      "release_scopes": {
+        "FR-001": "MVP",
+        "FR-002": "MVP",
+        "FR-004": "MVP",
+        "FR-008": "MVP",
+        "FR-035": "MVP",
+        "FR-060": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-008",
+      "title": "Implement time-series views comparisons and export",
+      "phase": "P1",
+      "status": "completed",
+      "owner": "persona_ui",
+      "depends_on": [
+        "WD-003",
+        "WD-007"
+      ],
+      "write_scopes": [
+        "apps/web/src/features/series/**",
+        "services/api/src/series/**",
+        "services/api/src/exports/**"
+      ],
+      "requirement_ids": [
+        "FR-005",
+        "FR-006",
+        "FR-007",
+        "FR-063",
+        "FR-066",
+        "NFR-003",
+        "NFR-007"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-10",
+        "T-12"
+      ],
+      "acceptance_criteria": [
+        "Golden unit/volume/aggregation results pass on irregular/gapped readings; quality and processing levels remain visible.",
+        "Multi-site/year comparisons and CSV exports enforce same grants as chart APIs; large requests use bounded async jobs."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent persona_ui on branch feat/WD-008-charts-exports from integration eaeae92",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration squash merge (branch feat/WD-008-charts-exports 99edb3b)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "suites reproduced independently: API 39/39, web 93/93; api package widened to src/**/*.test.ts now 59/59",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: DST golden hand-verified (57,600 s x 23.825 cfs / 43,560 = 3812/121 af)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "pending-owner",
+          "ref": "golden values and season defaults remain pending measurement-owner approval per the development plan; derivation documented in golden.ts",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-005",
+        "AT-FR-006",
+        "AT-FR-007",
+        "AT-FR-063",
+        "AT-FR-066",
+        "AT-NFR-003",
+        "AT-NFR-007"
+      ],
+      "release_scopes": {
+        "FR-005": "MVP",
+        "FR-006": "MVP",
+        "FR-007": "MVP",
+        "FR-063": "MVP",
+        "FR-066": "MVP",
+        "NFR-003": "NFR",
+        "NFR-007": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-009",
+      "title": "Implement assigned operational workspaces",
+      "phase": "P2",
+      "status": "completed",
+      "owner": "persona_ui",
+      "depends_on": [
+        "WD-004",
+        "WD-008"
+      ],
+      "write_scopes": [
+        "apps/web/src/features/operations/**",
+        "apps/web/src/features/favorites/**"
+      ],
+      "requirement_ids": [
+        "FR-009",
+        "FR-019",
+        "FR-025",
+        "FR-031",
+        "FR-032",
+        "FR-035",
+        "FR-036",
+        "FR-037",
+        "FR-038",
+        "FR-052"
+      ],
+      "test_ids": [
+        "T-02",
+        "T-03",
+        "T-10"
+      ],
+      "acceptance_criteria": [
+        "Commissioner/deputy and engineer variants see assigned scope with permitted public browsing and useful site diagnostics.",
+        "Preferences/favorites/known issues persist per account; assignment changes take effect in API and cached views."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent persona_ui on branch feat/WD-009-assigned-workspaces from integration 9963d64",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration squash merge (branch feat/WD-009-assigned-workspaces bc12b63)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "suites reproduced independently 49/49; web suite 158/158; demo policy mirror cross-checked against the real engine across 500+ decisions",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: deputy boundary instants, cross-system denial, revocation-at-grant-version verified",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-009",
+        "AT-FR-019",
+        "AT-FR-025",
+        "AT-FR-031",
+        "AT-FR-032",
+        "AT-FR-035",
+        "AT-FR-036",
+        "AT-FR-037",
+        "AT-FR-038",
+        "AT-FR-052"
+      ],
+      "release_scopes": {
+        "FR-009": "MVP",
+        "FR-019": "MVP",
+        "FR-025": "MVP",
+        "FR-031": "MVP",
+        "FR-032": "MVP",
+        "FR-035": "MVP",
+        "FR-036": "MVP",
+        "FR-037": "MVP",
+        "FR-038": "MVP",
+        "FR-052": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-010",
+      "title": "Implement readings bulk paste and site setup",
+      "phase": "P2",
+      "status": "completed",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-003",
+        "WD-009"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/readings/**",
+        "apps/web/src/features/data-entry/**",
+        "services/api/src/workflows/sites/**"
+      ],
+      "requirement_ids": [
+        "FR-020",
+        "FR-021",
+        "FR-022",
+        "FR-023",
+        "FR-031",
+        "FR-033",
+        "FR-034"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-07",
+        "T-10"
+      ],
+      "acceptance_criteria": [
+        "Preview and validate a full year of pasted daily rows with exact cell errors, units/timezone and duplicate handling.",
+        "Idempotent writes and concurrency checks prevent repeated imports and silent overwrites; new devices retain stream history."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "integration squash merge (branch feat/WD-010-entry-imports aebd572)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "suites reproduced independently 58/58 readings + 22/22 sites; api 215/215, web 167/167",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: 366-row leap-year golden with exact 363/3/0 counts, idempotent replay and retry-without-duplicates verified",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-020",
+        "AT-FR-021",
+        "AT-FR-022",
+        "AT-FR-023",
+        "AT-FR-031",
+        "AT-FR-033",
+        "AT-FR-034"
+      ],
+      "release_scopes": {
+        "FR-020": "MVP",
+        "FR-021": "MVP",
+        "FR-022": "MVP",
+        "FR-023": "MVP",
+        "FR-031": "MVP",
+        "FR-033": "MVP",
+        "FR-034": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-011",
+      "title": "Implement best-available corrections qualifiers and point audit",
+      "phase": "P2",
+      "status": "completed",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-003",
+        "WD-004"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/revisions/**",
+        "apps/web/src/features/quality-history/**"
+      ],
+      "requirement_ids": [
+        "FR-022",
+        "FR-039",
+        "FR-040",
+        "FR-041",
+        "FR-042",
+        "FR-066",
+        "NFR-007"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-08"
+      ],
+      "acceptance_criteria": [
+        "Raw readings cannot be edited; a separately approved tombstone operation retains original evidence and actor/reason.",
+        "Best-available revisions stay editable without a year-end lock; point audit preserves every prior change and qualifiers/reason.",
+        "Optimistic conflicts return a reviewable failure and changes trigger authorized publication cache refresh."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "integration commit a1c6e87 (squash of branch feat/WD-011-corrections-audit 19250f2)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-011 passed; both suites reproduced independently: revisions 20/20, derivation 13/13",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: separate withdraw-raw capability, frozen raw rows, idempotency different-body 409 verified in source",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "test-wiring",
+          "ref": "chore branch merged: services/api workspace package + feature test glob; root suite now contracts 1212 / database 5 / policy 26 / web 45 / api 20",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-022",
+        "AT-FR-039",
+        "AT-FR-040",
+        "AT-FR-041",
+        "AT-FR-042",
+        "AT-FR-066",
+        "AT-NFR-007"
+      ],
+      "release_scopes": {
+        "FR-022": "MVP",
+        "FR-039": "MVP",
+        "FR-040": "MVP",
+        "FR-041": "MVP",
+        "FR-042": "MVP",
+        "FR-066": "MVP",
+        "NFR-007": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-012",
+      "title": "Implement online field visits and private attachments",
+      "phase": "P2",
+      "status": "completed",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-010",
+        "WD-011"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/visits/**",
+        "apps/web/src/features/visits/**"
+      ],
+      "requirement_ids": [
+        "FR-026",
+        "FR-046",
+        "FR-049",
+        "NFR-002",
+        "NFR-007"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-10",
+        "T-11"
+      ],
+      "acceptance_criteria": [
+        "Assigned engineers record site visits, maintenance and inspection history with categorized attachments.",
+        "Public/internal classification is enforced by APIs, storage and exports; private wiring notes never enter public payloads or caches.",
+        "Network errors preserve an explicit unsent form state; full reload-safe offline synchronization remains the separate R2 task."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "integration commit eeff879 (squash of branch feat/WD-012-visits-attachments 750b835)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "visits suites reproduced independently 40/40; api 312, web 201",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: FR-049 visibility wall verified at every accessor incl. export manifests; wiring notes internal-by-policy server-side; byte-level canary sweep present",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-026",
+        "AT-FR-046",
+        "AT-FR-049",
+        "AT-NFR-002",
+        "AT-NFR-007"
+      ],
+      "release_scopes": {
+        "FR-026": "MVP",
+        "FR-046": "MVP",
+        "FR-049": "MVP",
+        "NFR-002": "NFR",
+        "NFR-007": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-013",
+      "title": "Implement diagnostics QC rules and recurrent issue views",
+      "phase": "P3",
+      "status": "in_progress",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-011",
+        "WD-014"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/qc/**",
+        "apps/web/src/features/quality/**"
+      ],
+      "requirement_ids": [
+        "FR-015",
+        "FR-016",
+        "FR-034",
+        "FR-036",
+        "FR-038"
+      ],
+      "test_ids": [
+        "T-06",
+        "T-10",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Range, rate-of-change, persistence, missing-data and zero rules use reviewed expected outcomes and record editor/version.",
+        "One failing monitoring task does not stop others; evaluate rules in test before promotion; voltage and known issues are discoverable."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent workflow_sync on branch feat/WD-013-qa-diagnostics from integration dd36f6f",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-015",
+        "AT-FR-016",
+        "AT-FR-034",
+        "AT-FR-036",
+        "AT-FR-038"
+      ],
+      "release_scopes": {
+        "FR-015": "MVP",
+        "FR-016": "MVP",
+        "FR-034": "MVP",
+        "FR-036": "MVP",
+        "FR-038": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-014",
+      "title": "Implement steward governance and connection health",
+      "phase": "P3",
+      "status": "completed",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-003",
+        "WD-004",
+        "WD-009"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/stewardship/**",
+        "apps/web/src/features/stewardship/**"
+      ],
+      "requirement_ids": [
+        "FR-011",
+        "FR-012",
+        "FR-013",
+        "FR-014",
+        "FR-017",
+        "FR-018",
+        "FR-023"
+      ],
+      "test_ids": [
+        "T-02",
+        "T-03",
+        "T-10",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Steward-only vocabulary/system and assignment changes preserve history and validation.",
+        "Provider/site onboarding uses approved ingestion contracts; connection failures link to filtered task details; monitoring is distinct from implementing a new ingestion platform."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "integration squash merge (branch feat/WD-014-alerts-qc 1ebc6da)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "stewardship suite reproduced independently 56/56; api 368, web 212",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: retired-term history preservation (20 assertions) and Monday weekend digest dedupe (22 assertions) verified",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-011",
+        "AT-FR-012",
+        "AT-FR-013",
+        "AT-FR-014",
+        "AT-FR-017",
+        "AT-FR-018",
+        "AT-FR-023"
+      ],
+      "release_scopes": {
+        "FR-011": "MVP",
+        "FR-012": "MVP",
+        "FR-013": "MVP",
+        "FR-014": "MVP",
+        "FR-017": "MVP",
+        "FR-018": "MVP",
+        "FR-023": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-015",
+      "title": "Implement scoped alerts and digest schedules",
+      "phase": "P3",
+      "status": "planned",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-009",
+        "WD-013",
+        "WD-014"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/notifications/**",
+        "apps/web/src/features/notifications/**"
+      ],
+      "requirement_ids": [
+        "FR-014",
+        "FR-016",
+        "FR-025",
+        "FR-052"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Subscriptions enforce current grants and support agreed threshold and event types with dedupe.",
+        "Fixed-clock tests prove configured agency timezone, hourly/daily/weekly frequencies and Monday weekend catch-up; no real messages are sent by tests."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-014",
+        "AT-FR-016",
+        "AT-FR-025",
+        "AT-FR-052"
+      ],
+      "release_scopes": {
+        "FR-014": "MVP",
+        "FR-016": "MVP",
+        "FR-025": "MVP",
+        "FR-052": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-016",
+      "title": "Implement researcher tokens and documented API",
+      "phase": "P1",
+      "status": "completed",
+      "owner": "identity_policy",
+      "depends_on": [
+        "WD-004",
+        "WD-008"
+      ],
+      "write_scopes": [
+        "services/api/src/tokens/**",
+        "docs/api/**",
+        "apps/web/src/features/developer-access/**"
+      ],
+      "requirement_ids": [
+        "FR-063",
+        "FR-064",
+        "FR-065",
+        "FR-066"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-10",
+        "T-16"
+      ],
+      "acceptance_criteria": [
+        "Users issue scoped expiring/revocable tokens; rotation and revocation are tested without changing accounts.",
+        "Docs show site/date/property/processing-level filters, paging and provenance; no privileged tokens appear in bundles, shared URLs or logs."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent on feat/wd-016 branch from integration 6794502",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration commit cb29202 (squash of branch feat/WD-016-research-access 2bf7c51)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "suite reproduced independently 17/17; api 76/76; web 102/102; zero uwdat_ literals in sources or bundle",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: one-time secret, salted constant-time storage, cascading authority revocation verified",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "pending-owner",
+          "ref": "90-day token lifetime default remains proposed pending security-owner ratification (TOKEN-POLICY.md)",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-063",
+        "AT-FR-064",
+        "AT-FR-065",
+        "AT-FR-066"
+      ],
+      "release_scopes": {
+        "FR-063": "MVP",
+        "FR-064": "MVP",
+        "FR-065": "MVP",
+        "FR-066": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-017",
+      "title": "Implement water supplier draft submission and PDF",
+      "phase": "P4",
+      "status": "planned",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-010",
+        "WD-011",
+        "WD-012"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/supplier-report/**",
+        "apps/web/src/features/supplier-report/**"
+      ],
+      "requirement_ids": [
+        "FR-053",
+        "FR-054",
+        "FR-055",
+        "FR-056",
+        "FR-057"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-07",
+        "T-10",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Supplier sees permitted system/history; category-specific required and unreasonable values are highlighted with accessible text.",
+        "Imports and boundary proposals/comments follow approved permissions; submitted annual report/PDF is stable and attributed; retry cannot create duplicate submission."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-053",
+        "AT-FR-054",
+        "AT-FR-055",
+        "AT-FR-056",
+        "AT-FR-057"
+      ],
+      "release_scopes": {
+        "FR-053": "R2",
+        "FR-054": "R2",
+        "FR-055": "R2",
+        "FR-056": "R2",
+        "FR-057": "R2"
+      },
+      "release": "R2"
+    },
+    {
+      "id": "WD-018",
+      "title": "Implement public and policy summaries",
+      "phase": "P3",
+      "status": "completed",
+      "owner": "persona_ui",
+      "depends_on": [
+        "WD-007",
+        "WD-008"
+      ],
+      "write_scopes": [
+        "apps/web/src/features/overview/**",
+        "services/api/src/summaries/**"
+      ],
+      "requirement_ids": [
+        "FR-058",
+        "FR-059",
+        "FR-060",
+        "FR-061",
+        "FR-062"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-10",
+        "T-11",
+        "T-12"
+      ],
+      "acceptance_criteria": [
+        "Lead with permitted statewide/selected-system summaries, measured-versus-estimated context and a data dictionary.",
+        "Space/time totals reconcile to approved golden data; charts use clear units, denominators, dates and non-color cues and expose accessible data tables."
+      ],
+      "evidence": [
+        {
+          "type": "merge",
+          "ref": "integration squash merge (branch feat/WD-018-policy-summaries d465e00)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "suites reproduced independently 23/23 + 13/13; api 158, web 171",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: totals reconcile exactly to WD-008 goldens; unknown bucket distinct; web view model deep-equals service values",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-058",
+        "AT-FR-059",
+        "AT-FR-060",
+        "AT-FR-061",
+        "AT-FR-062"
+      ],
+      "release_scopes": {
+        "FR-058": "MVP",
+        "FR-059": "MVP",
+        "FR-060": "MVP",
+        "FR-061": "MVP",
+        "FR-062": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-019",
+      "title": "Implement validated natural-language filters",
+      "phase": "P1",
+      "status": "completed",
+      "owner": "persona_ui",
+      "depends_on": [
+        "WD-002",
+        "WD-007"
+      ],
+      "write_scopes": [
+        "services/api/src/ai/filter-parser/**",
+        "apps/web/src/features/ai-search/**",
+        "fixtures/ai/**"
+      ],
+      "requirement_ids": [
+        "FR-003",
+        "NFR-010"
+      ],
+      "test_ids": [
+        "T-01",
+        "T-03",
+        "T-13"
+      ],
+      "acceptance_criteria": [
+        "AI outputs only validated controlled-field AST; users inspect/change exact manual filters before/after execution.",
+        "Curated examples match manual results; unsupported requests clarify; no prompt, model output or generated SQL broadens scope or executes arbitrary queries."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent on feat/wd-019 branch from integration 6794502",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration squash merge (branch feat/WD-019-ai-filters 853f944)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "parser suites reproduced independently 59/59 (26 equivalence incl. real discovery-engine station-list parity, 21 security, 12 parser); 66 new tests total; api 118, web 100",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: FilterSetProposal runtime invariants on the public path; injection corpus has no channel into filter values",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-003",
+        "AT-NFR-010"
+      ],
+      "release_scopes": {
+        "FR-003": "MVP",
+        "NFR-010": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-020",
+      "title": "Implement support shared context and onboarding",
+      "phase": "P3",
+      "status": "completed",
+      "owner": "product_traceability",
+      "depends_on": [
+        "WD-007",
+        "WD-009"
+      ],
+      "write_scopes": [
+        "docs/training/**",
+        "apps/web/src/features/help/**",
+        "services/api/src/support/**"
+      ],
+      "requirement_ids": [
+        "FR-008",
+        "FR-017",
+        "FR-018",
+        "FR-068"
+      ],
+      "test_ids": [
+        "T-01",
+        "T-10",
+        "T-11"
+      ],
+      "acceptance_criteria": [
+        "Role-specific guidance and feedback capture support reproducible URLs without secrets.",
+        "Agree analytics privacy/consent and retention with agency owner; provide training tasks for public and operational users."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent on feat/WD-020 branch from integration 9c1b4c2",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration commit 6b94868 (squash of branch feat/WD-020-support-onboarding 6fd48dc)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "suites reproduced independently 41/41 (34 support + 7 consent); web 165, api 169",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: hostile-state redaction and consent withdrawal-with-deletion verified",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "pending-owner",
+          "ref": "six analytics privacy/retention decisions in docs/training/PRIVACY-PROPOSAL.md remain PENDING with the agency owner",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-008",
+        "AT-FR-017",
+        "AT-FR-018",
+        "AT-FR-068"
+      ],
+      "release_scopes": {
+        "FR-008": "MVP",
+        "FR-017": "MVP",
+        "FR-018": "MVP",
+        "FR-068": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-021",
+      "title": "Run independent MVP system qualification",
+      "phase": "P3",
+      "status": "planned",
+      "owner": "qa_accessibility",
+      "depends_on": [
+        "WD-005",
+        "WD-008",
+        "WD-010",
+        "WD-011",
+        "WD-012",
+        "WD-013",
+        "WD-014",
+        "WD-015",
+        "WD-016",
+        "WD-018",
+        "WD-019",
+        "WD-020",
+        "WD-024",
+        "WD-025"
+      ],
+      "write_scopes": [
+        "tests/**",
+        "docs/verification/**"
+      ],
+      "requirement_ids": [
+        "FR-010",
+        "FR-026",
+        "FR-049",
+        "FR-062",
+        "FR-063",
+        "FR-065",
+        "NFR-001",
+        "NFR-002",
+        "NFR-003",
+        "NFR-004",
+        "NFR-005",
+        "NFR-006",
+        "NFR-007",
+        "NFR-008",
+        "NFR-009",
+        "NFR-010"
+      ],
+      "test_ids": [
+        "T-01",
+        "T-02",
+        "T-03",
+        "T-04",
+        "T-05",
+        "T-06",
+        "T-07",
+        "T-08",
+        "T-10",
+        "T-11",
+        "T-12",
+        "T-13",
+        "T-14",
+        "T-15",
+        "T-16"
+      ],
+      "acceptance_criteria": [
+        "Different security reviewer and tester reproduce approved MVP behavior from contracts; direct multi-format/cache/isolation attacks yield no restricted content.",
+        "Complete MVP browser, accessibility, scientific calculation, performance, restore and dependency evidence with exact environment revisions.",
+        "Do not require R2 offline/supplier/finalized-accounting acceptance for MVP; document those as planned and unimplemented."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-010",
+        "AT-FR-026",
+        "AT-FR-049",
+        "AT-FR-062",
+        "AT-FR-063",
+        "AT-FR-065",
+        "AT-NFR-001",
+        "AT-NFR-002",
+        "AT-NFR-003",
+        "AT-NFR-004",
+        "AT-NFR-005",
+        "AT-NFR-006",
+        "AT-NFR-007",
+        "AT-NFR-008",
+        "AT-NFR-009",
+        "AT-NFR-010"
+      ],
+      "release_scopes": {
+        "FR-010": "MVP",
+        "FR-026": "MVP",
+        "FR-049": "MVP",
+        "FR-062": "MVP",
+        "FR-063": "MVP",
+        "FR-065": "MVP",
+        "NFR-001": "NFR",
+        "NFR-002": "NFR",
+        "NFR-003": "NFR",
+        "NFR-004": "NFR",
+        "NFR-005": "NFR",
+        "NFR-006": "NFR",
+        "NFR-007": "NFR",
+        "NFR-008": "NFR",
+        "NFR-009": "NFR",
+        "NFR-010": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-022",
+      "title": "Accept MVP UAT and production readiness",
+      "phase": "P3",
+      "status": "planned",
+      "owner": "orchestrator",
+      "depends_on": [
+        "WD-020",
+        "WD-021",
+        "WD-025"
+      ],
+      "write_scopes": [
+        "docs/releases/**",
+        "docs/uat/**"
+      ],
+      "requirement_ids": [
+        "FR-024",
+        "FR-068"
+      ],
+      "test_ids": [
+        "T-06",
+        "T-10",
+        "T-14",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Commissioner and data owners accept the MVP annual distribution report and representative task-based UAT.",
+        "Named humans accept MVP scope, formulas, security, accessibility, operations and rollback; production change is separately authorized.",
+        "Deferred R2/Discovery features are visible in release notes and do not block MVP qualification."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-024",
+        "AT-FR-068"
+      ],
+      "release_scopes": {
+        "FR-024": "MVP",
+        "FR-068": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-023",
+      "title": "Discover advanced site and right-network integrations",
+      "phase": "P4",
+      "status": "planned",
+      "owner": "orchestrator",
+      "depends_on": [
+        "WD-022"
+      ],
+      "write_scopes": [
+        "docs/extensions/**"
+      ],
+      "requirement_ids": [
+        "FR-050",
+        "FR-067"
+      ],
+      "test_ids": [
+        "T-01",
+        "T-03",
+        "T-06",
+        "T-13"
+      ],
+      "acceptance_criteria": [
+        "Define advanced addresses/access points and right-network/OpenET/transaction source contracts, data availability and ownership.",
+        "Create a separate approved delivery scope; no initial production gate depends on unresolved Discovery."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-050",
+        "AT-FR-067"
+      ],
+      "release_scopes": {
+        "FR-050": "Discovery",
+        "FR-067": "Discovery"
+      },
+      "release": "Discovery"
+    },
+    {
+      "id": "WD-024",
+      "title": "Implement reproducible runtime monitoring and recovery",
+      "phase": "P0",
+      "status": "completed",
+      "owner": "platform_operations",
+      "depends_on": [
+        "WD-003",
+        "WD-005"
+      ],
+      "write_scopes": [
+        ".github/workflows/**",
+        "infra/runtime/**",
+        "ops/**"
+      ],
+      "requirement_ids": [
+        "FR-013",
+        "FR-014",
+        "FR-015",
+        "FR-049",
+        "FR-065",
+        "NFR-004",
+        "NFR-005",
+        "NFR-008",
+        "NFR-009"
+      ],
+      "test_ids": [
+        "T-08",
+        "T-12",
+        "T-14",
+        "T-16"
+      ],
+      "acceptance_criteria": [
+        "Pin source/package/image revisions, isolate secrets and publish logs/metrics without sensitive data; cap connection/render queues.",
+        "Demonstrate one NeoServer writer, coordinated backup/restore, external-write cache revision refresh and rollback in disposable staging.",
+        "Keep deployment and live database access disabled until explicit environment authorization."
+      ],
+      "evidence": [
+        {
+          "type": "dispatch",
+          "ref": "background agent on feat/wd-024 branch from integration 89eca56",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "merge",
+          "ref": "integration commit 4ff16e4 (squash of branch feat/WD-024-platform-runtime 4222460)",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "gate",
+          "ref": "scripts/gate.mjs all WD-024 passed; ops/verify.sh reproduced independently 5/5",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "review",
+          "ref": "independent orchestrator review: CI gates intact, dispatch-only fail-closed release pipeline, no executable push, deploy stub verified",
+          "date": "2026-10-21"
+        },
+        {
+          "type": "execution-pending",
+          "ref": "release dispatch, tag signing, runtime apply and all four T-14 drills remain execution-gated pending disposable staging and owner ratifications",
+          "date": "2026-10-21"
+        }
+      ],
+      "acceptance_scenario_ids": [
+        "AT-FR-013",
+        "AT-FR-014",
+        "AT-FR-015",
+        "AT-FR-049",
+        "AT-FR-065",
+        "AT-NFR-004",
+        "AT-NFR-005",
+        "AT-NFR-008",
+        "AT-NFR-009"
+      ],
+      "release_scopes": {
+        "FR-013": "MVP",
+        "FR-014": "MVP",
+        "FR-015": "MVP",
+        "FR-049": "MVP",
+        "FR-065": "MVP",
+        "NFR-004": "NFR",
+        "NFR-005": "NFR",
+        "NFR-008": "NFR",
+        "NFR-009": "NFR"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-025",
+      "title": "Implement annual distribution report generation",
+      "phase": "P3",
+      "status": "planned",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-008",
+        "WD-010",
+        "WD-011"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/distribution-report/**",
+        "apps/web/src/features/distribution-report/**"
+      ],
+      "requirement_ids": [
+        "FR-024"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-10",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Commissioner generates an assigned-site annual or multi-site distribution report with documented formulas, dates and processing context.",
+        "Report labels the extraction time and source revisions; repeat generation is deterministic for the same inputs.",
+        "Indefinitely immutable accounting/finalization and flexible-period behavior remain the separate R2 task."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-024"
+      ],
+      "release_scopes": {
+        "FR-024": "MVP"
+      },
+      "release": "MVP"
+    },
+    {
+      "id": "WD-011-R2",
+      "title": "Implement versioned rating curves and shifts",
+      "phase": "P4",
+      "status": "planned",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-011"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/rating-curves/**",
+        "apps/web/src/features/rating-curves/**"
+      ],
+      "requirement_ids": [
+        "FR-045"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-08"
+      ],
+      "acceptance_criteria": [
+        "Version effective rating-curve/regression and shift periods with approved data-owner formulas and provenance.",
+        "Prior curves remain available; edited curves cannot silently rewrite raw readings or finalized report snapshots."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-045"
+      ],
+      "release_scopes": {
+        "FR-045": "R2"
+      },
+      "release": "R2"
+    },
+    {
+      "id": "WD-012-R2",
+      "title": "Implement offline outbox sync and asset transfers",
+      "phase": "P4",
+      "status": "planned",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-010",
+        "WD-011",
+        "WD-012"
+      ],
+      "write_scopes": [
+        "apps/web/src/offline/**",
+        "services/api/src/workflows/sync/**",
+        "apps/web/src/features/asset-transfers/**"
+      ],
+      "requirement_ids": [
+        "FR-027",
+        "FR-048",
+        "NFR-002",
+        "NFR-007"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-09",
+        "T-10",
+        "T-11"
+      ],
+      "acceptance_criteria": [
+        "Readings, visits and categorized attachments survive offline reload and synchronize exactly once after recovery.",
+        "Exercise expired/revoked grants, conflicts, quota and commit-before-ack crash; no silent overwrite or lost edits.",
+        "Asset transfers retain serial/photo and location history; sign-out cleans account-specific cached data under approved policy."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-027",
+        "AT-FR-048",
+        "AT-NFR-002",
+        "AT-NFR-007"
+      ],
+      "release_scopes": {
+        "FR-027": "R2",
+        "FR-048": "R2",
+        "NFR-002": "NFR",
+        "NFR-007": "NFR"
+      },
+      "release": "R2"
+    },
+    {
+      "id": "WD-013-R2",
+      "title": "Implement recurring correction trends and curve diagnostics",
+      "phase": "P4",
+      "status": "planned",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-013",
+        "WD-011-R2"
+      ],
+      "write_scopes": [
+        "apps/web/src/features/recurring-quality/**",
+        "services/api/src/quality-trends/**"
+      ],
+      "requirement_ids": [
+        "FR-043",
+        "FR-045"
+      ],
+      "test_ids": [
+        "T-06",
+        "T-10",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Summarize recurring flags and corrections graphically and in tables without exposing restricted sites.",
+        "Relate approved rating/shift periods to diagnostic history; aggregates reconcile to reviewed fixture records."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-043",
+        "AT-FR-045"
+      ],
+      "release_scopes": {
+        "FR-043": "R2",
+        "FR-045": "R2"
+      },
+      "release": "R2"
+    },
+    {
+      "id": "WD-023-R2",
+      "title": "Scope and implement approved as-of voice and WCAT extensions",
+      "phase": "P4",
+      "status": "planned",
+      "owner": "orchestrator",
+      "depends_on": [
+        "WD-022",
+        "WD-011",
+        "WD-016"
+      ],
+      "write_scopes": [
+        "docs/extensions/r2/**",
+        "services/integrations/r2/**",
+        "apps/web/src/features/r2-extensions/**"
+      ],
+      "requirement_ids": [
+        "FR-044",
+        "FR-047",
+        "FR-051"
+      ],
+      "test_ids": [
+        "T-01",
+        "T-03",
+        "T-06",
+        "T-13"
+      ],
+      "acceptance_criteria": [
+        "Agree bounded as-of reconstruction, editable voice transcription and WCAT contracts before implementation.",
+        "Preserve reconstructible revisions and provenance; apply approved provider/privacy review before sending internal text/audio externally; test grants and deterministic manual fallback."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-044",
+        "AT-FR-047",
+        "AT-FR-051"
+      ],
+      "release_scopes": {
+        "FR-044": "R2",
+        "FR-047": "R2",
+        "FR-051": "R2"
+      },
+      "release": "R2"
+    },
+    {
+      "id": "WD-025-R2",
+      "title": "Implement decision snapshots finalized reports and flexible periods",
+      "phase": "P4",
+      "status": "planned",
+      "owner": "workflow_sync",
+      "depends_on": [
+        "WD-025",
+        "WD-011"
+      ],
+      "write_scopes": [
+        "services/api/src/workflows/accounting-snapshots/**",
+        "apps/web/src/features/accounting-snapshots/**"
+      ],
+      "requirement_ids": [
+        "FR-028",
+        "FR-029",
+        "FR-030"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-10",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Record exact provisional/revision evidence used for distribution decisions and reproducible finalized accounting snapshots.",
+        "Support approved flexible periods and supplemental use; later best-available corrections do not mutate a finalized report.",
+        "Approve finalize/reopen authority and concurrency behavior with the data owner."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-028",
+        "AT-FR-029",
+        "AT-FR-030"
+      ],
+      "release_scopes": {
+        "FR-028": "R2",
+        "FR-029": "R2",
+        "FR-030": "R2"
+      },
+      "release": "R2"
+    },
+    {
+      "id": "WD-026",
+      "title": "Independently qualify and accept R2",
+      "phase": "P4",
+      "release": "R2",
+      "status": "planned",
+      "owner": "qa_accessibility",
+      "depends_on": [
+        "WD-022",
+        "WD-011-R2",
+        "WD-012-R2",
+        "WD-013-R2",
+        "WD-017",
+        "WD-023-R2",
+        "WD-025-R2"
+      ],
+      "write_scopes": [
+        "tests/r2/**",
+        "docs/verification/r2/**"
+      ],
+      "requirement_ids": [
+        "FR-027",
+        "FR-028",
+        "FR-029",
+        "FR-030",
+        "FR-043",
+        "FR-044",
+        "FR-045",
+        "FR-047",
+        "FR-048",
+        "FR-051",
+        "FR-053",
+        "FR-054",
+        "FR-055",
+        "FR-056",
+        "FR-057"
+      ],
+      "test_ids": [
+        "T-03",
+        "T-06",
+        "T-09",
+        "T-10",
+        "T-11",
+        "T-13",
+        "T-14",
+        "T-15"
+      ],
+      "acceptance_criteria": [
+        "Independently prove approved R2 offline/conflict/revocation, snapshots, rating history, supplier and extension behavior.",
+        "Require data-owner/security/privacy acceptance of enabled R2 capabilities and regression-test MVP; no unapproved Discovery dependency."
+      ],
+      "evidence": [],
+      "acceptance_scenario_ids": [
+        "AT-FR-027",
+        "AT-FR-028",
+        "AT-FR-029",
+        "AT-FR-030",
+        "AT-FR-043",
+        "AT-FR-044",
+        "AT-FR-045",
+        "AT-FR-047",
+        "AT-FR-048",
+        "AT-FR-051",
+        "AT-FR-053",
+        "AT-FR-054",
+        "AT-FR-055",
+        "AT-FR-056",
+        "AT-FR-057"
+      ],
+      "release_scopes": {
+        "FR-027": "R2",
+        "FR-028": "R2",
+        "FR-029": "R2",
+        "FR-030": "R2",
+        "FR-043": "R2",
+        "FR-044": "R2",
+        "FR-045": "R2",
+        "FR-047": "R2",
+        "FR-048": "R2",
+        "FR-051": "R2",
+        "FR-053": "R2",
+        "FR-054": "R2",
+        "FR-055": "R2",
+        "FR-056": "R2",
+        "FR-057": "R2"
+      }
+    }
+  ],
+  "proposed_acceptance_targets": {
+    "status": "Provisional targets requiring owner confirmation; not source requirements or measured prototype results",
+    "percentile": "p95",
+    "first_usable_page_seconds": 3,
+    "useful_map_seconds": 3,
+    "bounded_chart_seconds": 2,
+    "bounded_bbox_features_seconds": 1,
+    "reference_profile": {
+      "visible_station_features": 10000,
+      "concurrent_sessions": 100,
+      "network_mbps": 10,
+      "network_rtt_ms": 100
+    },
+    "offline_duplicate_or_lost_edits": 0,
+    "note": "Plan 1 second bbox and 2 second chart targets are narrower provisional targets; PRD NFR-003 requires p95 structured filters/site details at most 2 seconds and 3 second core UI under an agreed profile."
+  },
+  "test_catalog": [
+    "T-01",
+    "T-02",
+    "T-03",
+    "T-04",
+    "T-05",
+    "T-06",
+    "T-07",
+    "T-08",
+    "T-09",
+    "T-10",
+    "T-11",
+    "T-12",
+    "T-13",
+    "T-14",
+    "T-15",
+    "T-16"
+  ],
+  "release_gates": {
+    "MVP": [
+      "WD-021",
+      "WD-022"
+    ],
+    "R2": [
+      "WD-026"
+    ],
+    "Discovery": [
+      "WD-023"
+    ]
+  }
+}

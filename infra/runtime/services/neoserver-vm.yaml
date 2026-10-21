@@ -1,0 +1,115 @@
+# =============================================================================
+# WD-024 runtime definition — NeoServer stateful single-active VM (ADR-09)
+#
+# TARGET SHAPE (authored; NOT applied). This file is deliberately NOT a
+# Cloud Run service: NeoServer's encrypted catalog store permits ONE active
+# process per store ("NeoServer | Single active VM/container with persistent
+# disk ... One active process per catalog store; fenced failover and
+# coordinated backup", docs/product/baseline/03-architecture.md). Ordinary
+# horizontal autoscaling with ephemeral disk is prohibited. Apply is blocked
+# until every item in infra/runtime/README.md is true.
+#
+# IMAGE is digest-pinned to the SAME pin as the WD-005 qualification stack
+# (infra/neoserver/docker-compose.yml; digest read from Docker Hub metadata
+# 2026-10-21, must be re-verified against the registry and the release
+# manifest before apply — NFR-008).
+# =============================================================================
+apiVersion: utah-water.runtime/v1
+kind: StatefulVM
+metadata:
+  name: utah-water-neoserver
+  description: >-
+    Single-active NeoServer spatial publication service reading SELECT-only
+    approved views from PostgreSQL/PostGIS (ADR-02, ADR-04).
+  labels:
+    app.kubernetes.io/part-of: utah-water-dashboard
+    utah-water/service-class: stateful-single-writer
+spec:
+  image: tobilg/neoserver:0.3.0@sha256:dab746cc669d00d4dd3667cbe871ba87b0e1f3d310456284ebaee0204a05b7d0
+  # --- single-active-writer fence (ADR-09) -----------------------------------
+  singleActiveInstance:
+    enforced: true
+    maxReplicas: 1
+    # Fencing: a replacement instance may only start after the previous one is
+    # fully stopped (lease/token released or VM terminated). No two processes
+    # may ever attach the catalog store disk simultaneously; an ordinary
+    # autoscaler must never own this service.
+    fencing:
+      method: stop-then-start
+      leaseTokenRef: ${SECRET_REF:neoserver-writer-lease-ref}
+      violationAlert: neoserver.dual-writer-detected
+  machineTypeRef: ${NEOSERVER_MACHINE_TYPE_REF}
+  zoneRef: ${NEOSERVER_ZONE_REF}
+  regionRef: ${DEPLOY_REGION_REF}
+  # --- persistent encrypted catalog store -------------------------------------
+  persistentDisk:
+    description: >-
+      Holds the NeoServer encrypted catalog store (qualifies as the
+      `serverdata` volume of the WD-005 compose stack). Snapshot/copy only in
+      QUIESCED state (store backup below and ops/runbooks/backup-restore.md).
+    sizeGb: 20
+    typeRef: ${NEOSERVER_DISK_TYPE_REF}
+    encryption:
+      keySecretRef: ${SECRET_REF:neoserver-store-key}
+      # The store key CANNOT be rotated in place (upstream constraint quoted in
+      # 03-architecture.md): compromise => rebuild the store from source data
+      # and re-issue stored workspace credentials. Recovery procedure and key
+      # escrow owner are recorded in ops/runbooks/backup-restore.md.
+  # --- maintenance window (quiesced first) ------------------------------------
+  maintenanceWindow:
+    cron: "0 2 * * SUN"
+    timeZone: America/Denver
+    quiesceRequired: true
+    notes: >-
+      Drain clients, stop the single writer, take the quiesced store snapshot,
+      perform platform maintenance, restart, verify served revision matches
+      the pre-stop public revision (T-14 restart drill).
+  # --- fenced restart procedure (see also ops/drills/README.md) ---------------
+  fencedRestart:
+    steps:
+      - stop ingestion-adjacent workers touching spatial publication
+      - drain in-flight tile/feature requests
+      - stop the NeoServer instance (single writer down)
+      - verify lease released / instance terminated
+      - start replacement from the same digest + disk
+      - verify store reopens with the store key and serves identical content
+    verificationRef: ops/drills/README.md#single-writer-restart
+  # --- store backup + key recovery (ADR-09; NFR-005) ---------------------------
+  storeBackup:
+    mode: quiesced-snapshot
+    scheduleCron: "0 3 * * *" # PROPOSAL pending RPO/RTO ratification
+    retentionPolicyRef: PENDING_OWNER_RATIFICATION
+    destinationRef: ${BACKUP_DESTINATION_REF}
+    coordination: >-
+      Coordinated with PostgreSQL backups so a restore pair is point-in-time
+      consistent (ops/runbooks/backup-restore.md). Public revision numbers in
+      the database must be >= the revisions materialized in the restored
+      store; reconcile via outbox replay, never by direct store edits.
+  keyRecovery:
+    storeKeySecretRef: ${SECRET_REF:neoserver-store-key}
+    escrowOwnerRef: PENDING_OWNER_RATIFICATION
+    rebuildRequiredOnCompromise: true
+  # --- database reach (SELECT approved views only) ------------------------------
+  databaseAccess:
+    account: publication-read
+    privileges: ["SELECT on approved publication views only"]
+    connectionPool:
+      maxConnections: 10
+      acquireTimeoutMs: 5000
+      statementTimeoutMs: 15000
+      secretRef: ${SECRET_REF:database-publication-read-url}
+    # WFS mutations are disabled for portal routes at the gateway; NeoServer
+    # never receives domain writes (ADR-02/ADR-10).
+  # --- cache refresh contract (ADR-10) ------------------------------------------
+  cacheRefresh:
+    owner: worker-service
+    trigger: transactional-outbox
+    stalenessTargetMs: 300000 # public spatial freshness proposal: 5 minutes
+    alertMetric: cacheRevisionLag
+  observability:
+    requestIdPropagation: true
+    logRedaction: nfr-009
+    metrics:
+      - tileFailures
+      - cacheRevisionLag
+      - storeLockViolations

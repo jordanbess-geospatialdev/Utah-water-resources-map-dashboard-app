@@ -1,0 +1,3 @@
+NAME                                                   IMAGE                                                                                            COMMAND                  SERVICE     CREATED          STATUS                   PORTS
+utah-water-wd005-neoserver-qualification-neoserver-1   tobilg/neoserver:0.3.0@sha256:dab746cc669d00d4dd3667cbe871ba87b0e1f3d310456284ebaee0204a05b7d0   "/app/neoserver serve"   neoserver   21 seconds ago   Up 20 seconds            127.0.0.1:9000->9000/tcp
+utah-water-wd005-neoserver-qualification-postgis-1     postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6   "docker-entrypoint.s…"   postgis     2 minutes ago    Up 2 minutes (healthy)   127.0.0.1:5477->5432/tcp

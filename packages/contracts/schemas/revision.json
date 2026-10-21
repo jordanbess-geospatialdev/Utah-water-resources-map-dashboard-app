@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/revision.json",
+  "title": "Revision",
+  "description": "Appended correction, exclusion or processing-level advance against an original observation (technical specification 'Revision' row and the example correction contract). Revisions never overwrite earlier revisions; each carries the base revision it builds on so concurrent editors receive a conflict instead of silent overwrite (If-Match optimistic version). Exclusions are tombstones that retain provenance; physical deletion requires a separately ratified retention rule.",
+  "type": "object",
+  "required": ["id", "targetObservationId", "type", "processingLevel", "qualifierIds", "reason", "actorId", "recordedAt"],
+  "properties": {
+    "id": { "type": "string", "description": "Revision identifier; also the basis of the If-Match ETag (e.g. \"revision-7\")." },
+    "targetObservationId": { "type": "string", "description": "Observation this revision applies to." },
+    "baseRevisionId": { "type": ["string", "null"], "description": "Revision this one builds on; null when it is the first revision of the observation." },
+    "type": { "type": "string", "enum": ["correction", "exclusion", "level-advance"], "description": "correction replaces the value, exclusion tombstones the point (value null), level-advance re-states the value at a higher processing level." },
+    "value": { "type": ["number", "null"], "description": "Replacement value in unitId; null for exclusions." },
+    "unitId": { "type": "string", "description": "Unit of the replacement value (governed)." },
+    "excluded": { "type": "boolean", "description": "True for exclusion tombstones." },
+    "processingLevel": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"], "description": "Governed level this revision asserts. A reviewed value is not automatically public." },
+    "qualifierIds": { "type": "array", "items": { "type": "string" }, "description": "Governed qualifier identifiers (e.g. ice-affected, interpolate). Multiple qualifiers are allowed." },
+    "reason": { "type": "string", "description": "Required justification. Redacted from public projections of revision history when internal." },
+    "actorId": { "type": "string", "description": "Acting principal, always derived from the session/token server-side, never from a body field." },
+    "recordedAt": { "type": "string", "description": "UTC instant the revision was recorded; distinct from the observation time." },
+    "idempotencyKey": { "type": "string", "description": "Client idempotency key; replaying the same key with a different body is rejected." }
+  }
+}

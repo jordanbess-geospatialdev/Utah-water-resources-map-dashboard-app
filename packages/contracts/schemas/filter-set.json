@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/filter-set.json",
+  "title": "FilterSet",
+  "description": "The one typed filter object shared by map, table, summary, chart and export requests across /api/v1 (FR-002, FR-065). Dimensions 1-20 are the named dimensions from the source requirements (S1 PDF pp. 13-15); processingLevels, datasetTypes, installationDateRange and seasonalityIds are the persona additions named in the technical specification. UNKNOWN VS ABSENT: an absent key means 'no constraint on this dimension'; the sentinel value \"unknown\" inside a multi-value array explicitly selects records whose value for that dimension is unknown or unset. These are different queries and must never be collapsed (e.g. telemetry:[\"telemetered\"] vs telemetry omitted vs telemetry:[\"unknown\"]). Multi-value arrays are OR within a dimension; dimensions AND together. Values are governed identifiers from the steward vocabulary unless an enum is given inline. Omit a dimension rather than sending an empty array.",
+  "type": "object",
+  "properties": {
+    "distributionSystemIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 1: distribution system identifiers. OR within, AND against other dimensions."
+    },
+    "systemGroupIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 2: system group identifiers."
+    },
+    "subgroupIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 3: subgroup identifiers within a distribution system."
+    },
+    "siteTypeIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 4: site type identifiers."
+    },
+    "telemetry": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["telemetered", "manual", "unknown"] },
+      "description": "Dimension 5: telemetry availability, tri-state. \"unknown\" (telemetry status not established) differs from an absent key (no constraint). \"manual\" means no telemetry."
+    },
+    "providerIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 6: data provider identifiers."
+    },
+    "observedPropertyIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 7: observed property identifiers (governed vocabulary: discharge, stage, voltage at v0.1.0)."
+    },
+    "controlStructureIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 8: control structure identifiers."
+    },
+    "structureMaterialIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 9: structure material identifiers."
+    },
+    "structureSizeIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 10: structure size class identifiers."
+    },
+    "waterSourceTypeIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 11: water source type identifiers (surface, ground, storage, ...)."
+    },
+    "measuringDeviceTypeIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 12: measuring device type identifiers."
+    },
+    "measurementMethodTypeIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 13: measurement method type identifiers. The steward must decide whether this and dimension 20 (methodTypeIds) are distinct concepts before v0.2."
+    },
+    "observationTypeIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 14: observation type identifiers."
+    },
+    "dataDateRange": {
+      "type": "object",
+      "description": "Dimension 15: available data date range. The mode is mandatory because the source requirement forbids inferring coverage meaning from an ambiguous label: \"any-data\" selects sites with any data in the period, \"complete-coverage\" requires full coverage of the period, \"available-since\" selects sites with data available on or after the start instant. Timestamps are RFC 3339 UTC instants.",
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["any-data", "complete-coverage", "available-since"] },
+        "start": { "type": "string", "description": "Inclusive start instant, half-open interval [start, end)." },
+        "end": { "type": "string", "description": "Exclusive end instant, half-open interval [start, end)." }
+      }
+    },
+    "siteStatusIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 16: site status identifiers (active, inactive, proposed at v0.1.0)."
+    },
+    "stateCodes": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["UT", "ID", "WY"] },
+      "description": "Dimension 17: state code. The Bear River basin spans Utah, Idaho and Wyoming."
+    },
+    "timeStepIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 18: time step identifiers."
+    },
+    "aggregationStatisticIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 19: aggregation statistic identifiers (daily mean, daily total, ...)."
+    },
+    "methodTypeIds": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dimension 20: method type identifiers. Overlaps dimension 13 in the source; steward decision pending."
+    },
+    "processingLevels": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"] },
+      "description": "Persona addition: processing level selection (governed vocabulary)."
+    },
+    "datasetTypes": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["measured", "estimated", "computed"] },
+      "description": "Persona addition: dataset type. Measured, estimated and computed are distinct accounting categories and are never silently summed."
+    },
+    "installationDateRange": {
+      "type": "object",
+      "description": "Persona addition (engineering): installation date range. Half-open [start, end); omit a bound to leave it open.",
+      "properties": {
+        "start": { "type": "string", "description": "Inclusive start instant." },
+        "end": { "type": "string", "description": "Exclusive end instant." }
+      }
+    },
+    "seasonalityIds": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["year-round", "seasonal"] },
+      "description": "Persona addition (engineering): operating seasonality. Seasonal sites suppress false missing-data incidents outside the active period."
+    }
+  }
+}

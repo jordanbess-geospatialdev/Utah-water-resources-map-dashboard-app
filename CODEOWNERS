@@ -1,0 +1,30 @@
+# CODEOWNERS — maps directories to owning agent roles per the development plan.
+# Handles are role identities; bind them to real accounts/teams when the Git host exists.
+# The orchestrator owns repo-level files and is the only merger into integration.
+
+*                                     @dwri-orchestrator
+/tasks.json                           @dwri-orchestrator
+/scripts/                             @dwri-orchestrator
+/CODEOWNERS                           @dwri-orchestrator
+/pnpm-lock.yaml                       @dwri-orchestrator
+/package.json                         @dwri-orchestrator
+/pnpm-workspace.yaml                  @dwri-orchestrator
+/docs/product/                        @dwri-product-traceability
+/docs/traceability/                   @dwri-product-traceability
+/packages/contracts/                  @dwri-contract-data
+/database/                            @dwri-contract-data
+/services/api/src/auth/               @dwri-identity-policy
+/packages/policy/                     @dwri-identity-policy
+/services/geo-gateway/                @dwri-spatial-integration
+/apps/web/src/map/                    @dwri-spatial-integration
+/apps/web/src/features/               @dwri-persona-ui
+/apps/web/src/components/             @dwri-persona-ui
+/services/api/src/workflows/          @dwri-workflow-sync
+/apps/web/src/offline/                @dwri-workflow-sync
+/tests/                               @dwri-qa-accessibility
+/fixtures/                            @dwri-qa-accessibility
+/docs/security/                       @dwri-security-reviewer
+/tests/security/                      @dwri-security-reviewer
+/.github/workflows/                   @dwri-platform-operations
+/infra/                               @dwri-platform-operations
+/ops/                                 @dwri-platform-operations

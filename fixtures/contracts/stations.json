@@ -1,0 +1,285 @@
+{
+  "$comment": "Six synthetic stations for seed utah-water-fixture-v1: public telemetry, public manual, restricted-owner, internal diagnostic, inactive and proposed. AXIS-ORDER CONTRACT: all coordinates are EPSG:4326 given as latitude then longitude. Fixture latitudes span 41.20-41.94 N and longitudes span -112.20 to -111.47 W, so |latitude| (~41-42) differs from |longitude| (~111-112) by ~70 degrees: a lat/lon swap or a WMS 1.3.0 EPSG:4326 axis-order error plots the point far outside Utah and is detectable by assertion, not by eye. Sta-hyrum-diversion-public (public) and sta-hyrum-diversion-owner (restricted) deliberately share the displayName below to catch identifier mistakes; display names are never identifiers. Sta-bear-corinne is public yet carries an internal block (gate code, wiring notes) that must never appear in any public projection: row visibility alone is not sufficient (FR-049).",
+  "seed": "utah-water-fixture-v1",
+  "stations": [
+    {
+      "id": "sta-bear-corinne",
+      "displayName": "Bear River near Corinne",
+      "externalId": "DWRI-01-0214",
+      "systemId": "sys-bear-river",
+      "subgroupIds": [],
+      "providerId": "prov-dwri-telemetry",
+      "siteTypeId": "natural-channel",
+      "status": "active",
+      "visibility": "public",
+      "telemetry": "telemetered",
+      "waterSourceTypeId": "surface-natural-flow",
+      "stateCode": "UT",
+      "latitude": 41.6337,
+      "longitude": -112.1965,
+      "elevationFt": 4218.0,
+      "version": 12,
+      "internal": {
+        "gateCode": "4471-CDX",
+        "wiringNotes": "RTU enclosure on east abutment; solar controller replaced 2025-10-02. Lock combo rotates quarterly.",
+        "visibility": "internal"
+      },
+      "datastreams": [
+        {
+          "id": "str-corinne-q",
+          "stationId": "sta-bear-corinne",
+          "observedPropertyId": "discharge",
+          "unitId": "cfs",
+          "methodTypeId": "method-rating",
+          "cadenceMinutes": 60,
+          "validRangeMin": 0,
+          "validRangeMax": 1200,
+          "visibility": "public",
+          "timeZone": "America/Denver",
+          "deviceDeployments": [
+            {
+              "deviceId": "dev-rtu-corinne-01",
+              "serial": "FL-8821",
+              "model": "FlumeLog 200",
+              "installedAt": "2024-10-15T16:00:00Z",
+              "removedAt": "2026-03-07T18:30:00Z"
+            },
+            {
+              "deviceId": "dev-rtu-corinne-02",
+              "serial": "FL-9102",
+              "model": "FlumeLog 300",
+              "installedAt": "2026-03-07T18:35:00Z",
+              "removedAt": null
+            }
+          ],
+          "ratingCurvePeriods": [
+            {
+              "id": "rc-corinne-2019",
+              "validFrom": "2019-10-01T00:00:00Z",
+              "validTo": "2026-03-07T18:00:00Z",
+              "method": "Log-linear least squares, n=18 calibrations"
+            },
+            {
+              "id": "rc-corinne-2026",
+              "validFrom": "2026-03-07T18:00:00Z",
+              "validTo": null,
+              "method": "Log-linear least squares, n=22 calibrations, high-flow extension"
+            }
+          ]
+        },
+        {
+          "id": "str-corinne-stage",
+          "stationId": "sta-bear-corinne",
+          "observedPropertyId": "stage",
+          "unitId": "ft",
+          "methodTypeId": "method-pressure-transducer",
+          "cadenceMinutes": 60,
+          "validRangeMin": 0,
+          "validRangeMax": 15,
+          "visibility": "public",
+          "timeZone": "America/Denver",
+          "deviceDeployments": [
+            {
+              "deviceId": "dev-pressure-corinne-01",
+              "serial": "PT-4407",
+              "model": "AquaPress 2",
+              "installedAt": "2024-10-15T16:00:00Z",
+              "removedAt": null
+            }
+          ],
+          "ratingCurvePeriods": []
+        }
+      ]
+    },
+    {
+      "id": "sta-hyrum-diversion-public",
+      "displayName": "Little Bear River Diversion near Hyrum",
+      "externalId": "DWRI-05-1102",
+      "systemId": "sys-bear-river",
+      "subgroupIds": ["sub-bear-logan-canyon"],
+      "providerId": "prov-coop-manual",
+      "siteTypeId": "flume",
+      "status": "active",
+      "visibility": "public",
+      "telemetry": "manual",
+      "waterSourceTypeId": "surface-natural-flow",
+      "stateCode": "UT",
+      "latitude": 41.6295,
+      "longitude": -111.8524,
+      "elevationFt": 4612.0,
+      "version": 5,
+      "datastreams": [
+        {
+          "id": "str-hyrum-q-public",
+          "stationId": "sta-hyrum-diversion-public",
+          "observedPropertyId": "discharge",
+          "unitId": "cfs",
+          "methodTypeId": "method-current-meter",
+          "cadenceMinutes": 10080,
+          "validRangeMin": 0,
+          "validRangeMax": 300,
+          "visibility": "public",
+          "timeZone": "America/Denver",
+          "deviceDeployments": [],
+          "ratingCurvePeriods": []
+        }
+      ]
+    },
+    {
+      "id": "sta-hyrum-diversion-owner",
+      "displayName": "Little Bear River Diversion near Hyrum",
+      "externalId": "CACHE-77-0091",
+      "systemId": "sys-bear-river",
+      "subgroupIds": [],
+      "providerId": "prov-coop-manual",
+      "siteTypeId": "weir",
+      "status": "active",
+      "visibility": "restricted",
+      "telemetry": "manual",
+      "waterSourceTypeId": "surface-storage-release",
+      "stateCode": "UT",
+      "latitude": 41.6288,
+      "longitude": -111.8531,
+      "elevationFt": 4611.0,
+      "ownerOrganizationId": "org-cache-water",
+      "version": 3,
+      "internal": {
+        "gateCode": "9917-KWW",
+        "wiringNotes": "Owner-operated weir; contact through the district office only.",
+        "visibility": "internal"
+      },
+      "datastreams": [
+        {
+          "id": "str-hyrum-q-owner",
+          "stationId": "sta-hyrum-diversion-owner",
+          "observedPropertyId": "discharge",
+          "unitId": "cfs",
+          "methodTypeId": "method-weir-board",
+          "cadenceMinutes": 10080,
+          "validRangeMin": 0,
+          "validRangeMax": 150,
+          "visibility": "restricted",
+          "timeZone": "America/Denver",
+          "deviceDeployments": [],
+          "ratingCurvePeriods": []
+        }
+      ]
+    },
+    {
+      "id": "sta-bear-lake-diagnostic",
+      "displayName": "Garden City Diagnostic Site",
+      "externalId": "DWRI-16-0440",
+      "systemId": "sys-bear-river",
+      "subgroupIds": [],
+      "providerId": "prov-dwri-telemetry",
+      "siteTypeId": "diagnostic",
+      "status": "active",
+      "visibility": "internal",
+      "telemetry": "telemetered",
+      "waterSourceTypeId": "surface-natural-flow",
+      "stateCode": "UT",
+      "latitude": 41.9417,
+      "longitude": -111.4710,
+      "elevationFt": 5924.0,
+      "version": 9,
+      "internal": {
+        "gateCode": "2208-QQZ",
+        "wiringNotes": "Second latitude point (41.94 N): far north of the Corinne/Hyrum cluster, making a swapped-axis render obvious even without exact values.",
+        "visibility": "internal"
+      },
+      "datastreams": [
+        {
+          "id": "str-diag-voltage",
+          "stationId": "sta-bear-lake-diagnostic",
+          "observedPropertyId": "voltage",
+          "unitId": "V",
+          "methodTypeId": "method-direct-read",
+          "cadenceMinutes": 60,
+          "validRangeMin": 11.5,
+          "validRangeMax": 15,
+          "visibility": "internal",
+          "timeZone": "America/Denver",
+          "deviceDeployments": [],
+          "ratingCurvePeriods": []
+        }
+      ]
+    },
+    {
+      "id": "sta-summit-creek-inactive",
+      "displayName": "Summit Creek Restoration Site",
+      "externalId": "DWRI-05-1178",
+      "systemId": "sys-bear-river",
+      "subgroupIds": ["sub-bear-logan-canyon"],
+      "providerId": "prov-coop-manual",
+      "siteTypeId": "weir",
+      "status": "inactive",
+      "visibility": "public",
+      "telemetry": "manual",
+      "waterSourceTypeId": "surface-natural-flow",
+      "stateCode": "UT",
+      "latitude": 41.7351,
+      "longitude": -111.8280,
+      "elevationFt": 4885.0,
+      "version": 8,
+      "datastreams": [
+        {
+          "id": "str-summit-q",
+          "stationId": "sta-summit-creek-inactive",
+          "observedPropertyId": "discharge",
+          "unitId": "cfs",
+          "methodTypeId": "method-weir-board",
+          "cadenceMinutes": 10080,
+          "validRangeMin": 0,
+          "validRangeMax": 80,
+          "visibility": "public",
+          "timeZone": "America/Denver",
+          "deviceDeployments": [
+            {
+              "deviceId": "dev-weir-summit-01",
+              "serial": "WR-0117",
+              "model": "Cutthroat weir",
+              "installedAt": "2023-04-02T15:00:00Z",
+              "removedAt": "2025-11-15T20:00:00Z"
+            }
+          ],
+          "ratingCurvePeriods": []
+        }
+      ]
+    },
+    {
+      "id": "sta-ogden-valley-proposed",
+      "displayName": "Ogden Valley Upper Proposed Gauge",
+      "externalId": "DWRI-22-0007",
+      "systemId": "sys-weber-river",
+      "subgroupIds": [],
+      "providerId": "prov-dwri-telemetry",
+      "siteTypeId": "flume",
+      "status": "proposed",
+      "visibility": "restricted",
+      "telemetry": "unknown",
+      "waterSourceTypeId": "surface-natural-flow",
+      "stateCode": "UT",
+      "latitude": 41.2037,
+      "longitude": -111.7802,
+      "elevationFt": 5336.0,
+      "ownerOrganizationId": "org-bear-river-users",
+      "version": 1,
+      "datastreams": [
+        {
+          "id": "str-ogden-q-proposed",
+          "stationId": "sta-ogden-valley-proposed",
+          "observedPropertyId": "discharge",
+          "unitId": "cfs",
+          "methodTypeId": "method-rating",
+          "cadenceMinutes": 60,
+          "validRangeMin": 0,
+          "validRangeMax": 400,
+          "visibility": "restricted",
+          "timeZone": "America/Denver",
+          "deviceDeployments": [],
+          "ratingCurvePeriods": []
+        }
+      ]
+    }
+  ]
+}

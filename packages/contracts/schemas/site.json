@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/site.json",
+  "title": "Site",
+  "description": "Station metadata entity (technical specification 'Station' and 'Datastream' rows). Geometry is EPSG:4326 with latitude/longitude axis order (see the axis-order note in fixtures/contracts/stations.json). The internal block (gate codes, wiring notes) is server-side only and must never appear in a public projection; row visibility alone is not sufficient (FR-049). Stations carry a version used by PATCH /sites/{id} If-Match conflict detection.",
+  "type": "object",
+  "required": ["id", "displayName", "systemId", "providerId", "status", "visibility", "telemetry", "stateCode", "latitude", "longitude", "version"],
+  "properties": {
+    "id": { "type": "string", "description": "Stable internal identifier. Display names are not identifiers and may repeat (see the shared-display-name fixture pair)." },
+    "displayName": { "type": "string", "description": "Human-facing label. Not unique; never a primary key." },
+    "externalId": { "type": "string", "description": "Legacy identifier preserved in the provider/external-ID mapping." },
+    "systemId": { "type": "string", "description": "Owning distribution system (or subgroup parent system)." },
+    "subgroupIds": { "type": "array", "items": { "type": "string" }, "description": "Governed group/subgroup memberships." },
+    "providerId": { "type": "string", "description": "Data provider identifier." },
+    "siteTypeId": { "type": "string", "description": "Site classification." },
+    "status": { "type": "string", "enum": ["proposed", "active", "inactive", "retired"], "description": "Lifecycle status." },
+    "visibility": { "type": "string", "enum": ["public", "restricted", "internal"], "description": "Record visibility class. Public sites may still carry internal-only fields." },
+    "telemetry": { "type": "string", "enum": ["telemetered", "manual", "unknown"], "description": "Tri-state telemetry availability; unknown differs from absent/no telemetry." },
+    "waterSourceTypeId": { "type": "string" },
+    "stateCode": { "type": "string" },
+    "latitude": { "type": "number", "description": "EPSG:4326 latitude. Utah fixtures use ~41-42 N." },
+    "longitude": { "type": "number", "description": "EPSG:4326 longitude. Utah fixtures use ~-111 to -113 (|longitude| ~111-113)." },
+    "elevationFt": { "type": "number" },
+    "ownerOrganizationId": { "type": "string", "description": "Water-owner organization for restricted-owner records." },
+    "version": { "type": "integer", "description": "Optimistic concurrency version for metadata edits." },
+    "internal": {
+      "type": ["object", "null"],
+      "description": "Fields that must be stripped from every public/cohort projection. Presence of this block on a public station is intentional fixture coverage.",
+      "properties": {
+        "gateCode": { "type": "string" },
+        "wiringNotes": { "type": "string" },
+        "visibility": { "type": "string", "enum": ["internal"] }
+      }
+    },
+    "datastreams": {
+      "type": "array",
+      "items": { "type": "object", "description": "Datastream: station, observed property, unit, method, cadence and capacity limits.", "required": ["id", "stationId", "observedPropertyId", "unitId", "cadenceMinutes", "visibility", "timeZone"], "properties": {
+        "id": { "type": "string" },
+        "stationId": { "type": "string" },
+        "observedPropertyId": { "type": "string" },
+        "unitId": { "type": "string" },
+        "methodTypeId": { "type": "string" },
+        "cadenceMinutes": { "type": "integer" },
+        "validRangeMin": { "type": "number", "description": "Inclusive physical/plausibility lower bound; values below are out-of-range, not merely suspect." },
+        "validRangeMax": { "type": "number", "description": "Inclusive upper bound; values above are out-of-range." },
+        "visibility": { "type": "string", "enum": ["public", "restricted", "internal"] },
+        "timeZone": { "type": "string", "description": "IANA zone used for display and day aggregation (America/Denver for Utah)." },
+        "deviceDeployments": { "type": "array", "items": { "type": "object", "properties": { "deviceId": { "type": "string" }, "installedAt": { "type": "string" }, "removedAt": { "type": ["string", "null"] } } }, "description": "Effective-dated device deployments; a replacement closes the old deployment and opens a dated new one." },
+        "ratingCurvePeriods": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "validFrom": { "type": "string" }, "validTo": { "type": ["string", "null"] }, "method": { "type": "string" } } }, "description": "Effective-dated rating curve versions with method labels." }
+      } }
+    }
+  }
+}

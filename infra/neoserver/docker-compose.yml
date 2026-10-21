@@ -1,0 +1,106 @@
+# =============================================================================
+# WD-005 NeoServer QUALIFICATION stack (disposable; NOT a production topology)
+#
+# Purpose: stand up a pinned NeoServer + PostGIS pair with a small synthetic
+# station layer so infra/neoserver/qualification/capture.mjs can record the
+# protocol evidence listed in qualification/recorded/EXPECTATIONS.md.
+# Execution is PENDING: this environment has no Docker daemon. Every image
+# reference below is pinned (tag@digest); the digests were read from Docker
+# Hub metadata on 2026-10-21 and MUST be re-verified by `docker compose pull`
+# at first execution before any capture is trusted.
+#
+# SINGLE-ACTIVE-WRITER (ADR-09, docs/product/baseline/03-architecture.md):
+#   NeoServer's encrypted catalog store permits ONE active process. Do NOT
+#   scale this service (`deploy.replicas`, `docker compose up --scale
+#   neoserver=2`) and do not attach the same `serverdata` volume to two
+#   running containers. Fenced failover = stop the old container first.
+#
+# STORE BACKUP:
+#   The store is the `serverdata` volume (store file at /data/neoserver.db).
+#   Back it up QUIESCED: `docker compose stop neoserver`, then copy the
+#   volume (`docker run --rm -v <project>_serverdata:/data -v "$PWD":/backup
+#   alpine tar czf /backup/neoserver-store.tgz /data`), then start again.
+#   The store key (NEOSRV_STORE_KEY) cannot be rotated in place; a compromised
+#   key means rebuilding the store and re-issuing stored credentials.
+# =============================================================================
+
+name: utah-water-wd005-neoserver-qualification
+
+services:
+  postgis:
+    # PostGIS for the synthetic station layer. Pinned tag@digest.
+    image: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+    environment:
+      POSTGRES_DB: neosrv
+      POSTGRES_USER: neosrv
+      # Secret reference only: value lives in .env (never committed).
+      POSTGRES_PASSWORD: ${QUALIFICATION_POSTGRES_PASSWORD:?set QUALIFICATION_POSTGRES_PASSWORD in infra/neoserver/.env}
+    volumes:
+      # Publication views + synthetic stations; runs once on first boot.
+      # T-05 DEFECT FIX (compose-only): mounting the whole ./initdb dir put
+      # "10-qualification-station-layer.sql" ALPHABETICALLY BEFORE the postgis
+      # image's own "10_postgis.sh" (ASCII '-' < '_'), so ST_MakePoint did not
+      # exist yet and first boot exited 3 (see recorded/defect-postgis-
+      # initdb-ordering.log). Remounting the seed as "20-…" makes it run AFTER
+      # extension creation. Owner: spatial_integration.
+      - ./initdb/10-qualification-station-layer.sql:/docker-entrypoint-initdb.d/20-qualification-station-layer.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neosrv -d neosrv"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    # Qualification only: no host port needed by NeoServer's datasource is
+    # exposed; NeoServer reaches it on the compose network.
+    ports:
+      - "127.0.0.1:5477:5432" # loopback-only convenience for psql debugging
+
+  neoserver:
+    # tobilg/neoserver 0.3.0, digest read from Docker Hub 2026-10-21.
+    image: tobilg/neoserver:0.3.0@sha256:dab746cc669d00d4dd3667cbe871ba87b0e1f3d310456284ebaee0204a05b7d0
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      # Secret reference only: value lives in .env. Generate with
+      # `openssl rand -hex 32`. Cannot be rotated in place (see header).
+      NEOSRV_STORE_KEY: ${NEOSRV_STORE_KEY:?set NEOSRV_STORE_KEY in infra/neoserver/.env}
+      # Qualification base URL (loopback). NEOSRV_SERVER_URLBASE is what the
+      # service uses to build ABSOLUTE links in TileJSON/capabilities -
+      # exactly the field the T-05 relative-link expectations probe.
+      NEOSRV_SERVER_URLBASE: http://localhost:9000
+      # T-05 DEFECT FIX: without an explicit bind host NeoServer 0.3.0 binds
+      # 127.0.0.1 INSIDE the container, which the 127.0.0.1:9000->9000 host
+      # port mapping cannot reach (host curl got an empty reply). Docs:
+      # NEOSRV_SERVER_HTTPHOST=0.0.0.0 binds all interfaces; a non-loopback
+      # bind requires Server.UrlBase (set above). Still loopback-only on the
+      # HOST via the ports mapping. Owner: spatial_integration.
+      NEOSRV_SERVER_HTTPHOST: 0.0.0.0
+      # Plain HTTP is intentional FOR LOCAL QUALIFICATION ONLY. Never set
+      # this to false anywhere reachable by anyone else.
+      NEOSRV_AUTH_REQUIREHTTPS: "false"
+      # T-05 DEFECT FIX: WMS/WFS/OGC-API-Tiles routes 404 with workspace
+      # settings alone - each protocol's GLOBAL flag "controls whether a
+      # protocol's routes are mounted at all" ([WMS]/[WFS]/[Tiles] default
+      # false in the upstream example config; workspace settings then enable
+      # them per workspace). OGC API Features routes mount by default; tiles
+      # did not, so /workspaces/*/ogc-tiles/* 404'd until NEOSRV_TILES_ENABLED
+      # was set. Owner: spatial_integration.
+      NEOSRV_WMS_ENABLED: "true"
+      NEOSRV_WFS_ENABLED: "true"
+      NEOSRV_TILES_ENABLED: "true"
+    volumes:
+      # Persistent encrypted catalog store: exactly ONE writer (see header).
+      - serverdata:/data
+    ports:
+      - "127.0.0.1:9000:9000"
+
+  # One-shot store initialization. Run before the first `docker compose up`:
+  #   docker compose run --rm neoserver init --store-path /data/neoserver.db
+  # (Workspaces/API keys are then provisioned through the management CLI/API
+  #  following docs/deployment.md; record what you create in
+  #  qualification/recorded/EXPECTATIONS.md - never the secret values.)
+
+volumes:
+  serverdata: {}
+  pgdata: {}

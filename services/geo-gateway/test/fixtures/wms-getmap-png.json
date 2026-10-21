@@ -1,0 +1,5 @@
+{
+  "$note": "SYNTHETIC SAMPLE - a well-known 1x1 transparent PNG (base64), NOT a capture from a real NeoServer. Stands in for a WMS 1.3.0 GetMap image/png response body during gateway tests; the qualification capture must replace it with a real rendered GetMap.",
+  "contentType": "image/png",
+  "pngBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+}

@@ -1,0 +1,80 @@
+{
+  "$comment": "Governed vocabulary for the fixture world (seed utah-water-fixture-v1). Flow, stage and equipment are distinct dimensions and are never silently converted into one another (technical specification, Numerical and temporal rules). Only an authorized steward creates or retires vocabulary terms; used terms cannot be deleted in a way that breaks historical records (FR-012).",
+  "seed": "utah-water-fixture-v1",
+  "version": "0.1.0",
+  "observedProperties": [
+    {
+      "id": "discharge",
+      "name": "Discharge",
+      "dimension": "flow",
+      "canonicalUnitId": "cfs",
+      "description": "Volumetric flow rate. Distinct from stage and storage; never summed with them."
+    },
+    {
+      "id": "stage",
+      "name": "Stage",
+      "dimension": "level",
+      "canonicalUnitId": "ft",
+      "description": "Water surface elevation above a local datum."
+    },
+    {
+      "id": "voltage",
+      "name": "Battery voltage",
+      "dimension": "equipment",
+      "canonicalUnitId": "V",
+      "description": "Station supply voltage. Internal diagnostic property, not a water measurement."
+    }
+  ],
+  "units": [
+    {
+      "id": "cfs",
+      "name": "cubic feet per second",
+      "dimension": "flow",
+      "description": "Acre-feet = integrated cubic feet / 43560 for a rate representative of its interval."
+    },
+    {
+      "id": "ft",
+      "name": "feet",
+      "dimension": "length"
+    },
+    {
+      "id": "V",
+      "name": "volt",
+      "dimension": "equipment"
+    }
+  ],
+  "qualifiers": [
+    {
+      "id": "ice-affected",
+      "name": "Ice affected",
+      "description": "Value influenced by ice; used when the measurement is retained with a caveat rather than excluded."
+    },
+    {
+      "id": "interpolate",
+      "name": "Interpolated",
+      "description": "Value estimated between bracketing readings under a declared method; never applied across an unbounded gap."
+    }
+  ],
+  "processingLevels": [
+    {
+      "id": "raw",
+      "name": "Raw",
+      "description": "Original observation exactly as received. Immutable; corrections append revisions."
+    },
+    {
+      "id": "provisional",
+      "name": "Provisional",
+      "description": "Screened but not reviewed; still subject to change."
+    },
+    {
+      "id": "reviewed",
+      "name": "Reviewed",
+      "description": "Accepted through a documented review workflow. Reviewed does not imply public."
+    },
+    {
+      "id": "best-available",
+      "name": "Best available",
+      "description": "Current best value for the logical observation; remains correctable after year end."
+    }
+  ]
+}

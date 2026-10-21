@@ -1,0 +1,27 @@
+== 9a. second active writer on the same serverdata volume (ADR-09) ==
+second writer started; waiting 6s
+second-writer state: exited exit=1
+--- second-writer log tail:
+{"time":"2026-10-21T12:07:42.283847121Z","level":"ERROR","msg":"failed to open backing store","error":"another process is holding /data/neoserver.db; neoserver requires a single active node per store — stop the other process (or the running server, for admin commands) and retry: failed to attach encrypted database: IO Error: Could not set lock on file \"/data/neoserver.db\": Conflicting lock is held in PID 0. See also https://duckdb.org/docs/stable/connect/concurrency"}
+(second-writer container removed)
+original still serving: 200 (ogc/collections)
+== 9b. restart drill (store reopens with NEOSRV_STORE_KEY) ==
+ Container utah-water-wd005-neoserver-qualification-neoserver-1 Started 
+tile after restart -> 200 application/vnd.mapbox-vector-tile 129B
+restart-tile sha256: 03aa35dabf46542ff7614eb3c95a0d5503519647d18a1c04527c4bf198d5250c
+manifest  sha256: 03aa35dabf46542ff7614eb3c95a0d5503519647d18a1c04527c4bf198d5250c
+tilejson after restart -> 200
+items after restart: features=3 station_ids=sta-hyrum-diversion-public,sta-summit-creek-inactive,sta-bear-corinne
+== 9c. quiesced backup/restore drill ==
+stopping neoserver (quiesce)
+ Container utah-water-wd005-neoserver-qualification-neoserver-1 Stopped 
+store copied:  bytes (in host TEMP, never committed)
+store restored into fresh volume t05-recovered-serverdata
+recovered instance started on 127.0.0.1:9001
+recovered tile -> 200 application/vnd.mapbox-vector-tile 129B
+recovered sha256: 03aa35dabf46542ff7614eb3c95a0d5503519647d18a1c04527c4bf198d5250c
+manifest  sha256: 03aa35dabf46542ff7614eb3c95a0d5503519647d18a1c04527c4bf198d5250c
+recovered items: features=3 ids=sta-hyrum-diversion-public,sta-summit-creek-inactive,sta-bear-corinne
+(recovered container+volume removed)
+ Container utah-water-wd005-neoserver-qualification-neoserver-1 Started 
+original back: 200 (ogc/collections)

@@ -1,0 +1,9 @@
+# T-05 external-write cache refresh drill (EXPECTATIONS item 8)
+step1 PUT settings/ogc-tiles cache_enabled=true -> 200
+step2 warm   2026-10-21T12:06:50.425Z status=200 bytes=129 sha16=3bab04667e9a59f7 (first=3bab04667e9a59f7)
+step3 EXTERNAL psql UPDATE display_name+=' [T05-REV2]' @ 2026-10-21T12:06:50.840Z -> UPDATE 1
+step4 fetch  2026-10-21T12:06:50.849Z status=200 bytes=129 sha16=3bab04667e9a59f7 stale-serves-old-bytes=true rev2-string-in-tile=false
+step5 POST /api/v1/workspaces/water-public/cache/clear -> 200 @ 2026-10-21T12:06:50.878Z
+step6 fetch  2026-10-21T12:06:50.893Z status=200 bytes=141 sha16=2ddb64abd2f878c0 rev2-string-in-tile=true changed-from-warm=true
+step7 restore psql -> UPDATE 1; cache/clear -> 200
+step8 PUT settings/ogc-tiles cache_enabled=false (restore) -> 200

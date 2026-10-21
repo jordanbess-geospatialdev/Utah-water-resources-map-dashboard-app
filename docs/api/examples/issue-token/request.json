@@ -1,0 +1,5 @@
+{
+  "label": "Corinne research extract",
+  "scopes": ["observations:read", "exports:create"],
+  "expiresAt": "2026-06-07T07:00:00Z"
+}

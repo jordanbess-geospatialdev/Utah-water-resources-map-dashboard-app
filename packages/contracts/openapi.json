@@ -1,0 +1,1514 @@
+{
+  "openapi": "3.1.0",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "Utah Water Measurement Data Dashboard API",
+    "version": "0.1.0",
+    "description": "Proposed application contracts for the Utah Water Measurement Data Dashboard, prefix /api/v1 (technical specification, 'Proposed application API'). Every route from the specification's API table is described here. Authorization is evaluated on every endpoint: allow_public_read requires an explicitly published object with public-projection fields; allow_protected requires an authenticated active principal whose role grants the action within a current assignment. Successful responses include requestId, effective filters, data revision and freshness where relevant. Errors use the shared Problem model. These are proposed contracts for implementation, not a claim that a production API exists. Deterministic fixtures: fixtures/contracts (seed utah-water-fixture-v1). Contract hashes: CONTRACTS-HASH.md.",
+    "contact": { "name": "DWRi Water Measurement Program" }
+  },
+  "servers": [
+    { "url": "/api/v1", "description": "Same-origin application API behind the dashboard BFF; spatial gateway routes are allowlisted separately." }
+  ],
+  "tags": [
+    { "name": "session", "description": "Current subject and capabilities" },
+    { "name": "catalog", "description": "Permitted spatial/domain layers" },
+    { "name": "sites", "description": "Station metadata" },
+    { "name": "observations", "description": "Time series entry and retrieval" },
+    { "name": "revisions", "description": "Correction and review history" },
+    { "name": "imports", "description": "Staged bulk imports" },
+    { "name": "exports", "description": "Asynchronous CSV/report jobs" },
+    { "name": "preferences", "description": "Favorites and notification subscriptions" },
+    { "name": "api-tokens", "description": "Scoped researcher credentials" },
+    { "name": "visits", "description": "Field documentation" },
+    { "name": "admin", "description": "Steward operations" },
+    { "name": "search", "description": "Natural-language filter interpretation" }
+  ],
+  "security": [{ "sessionCookie": [] }],
+  "paths": {
+    "/session": {
+      "get": {
+        "tags": ["session"],
+        "operationId": "getSession",
+        "summary": "Current subject, capabilities, assignment version and server time.",
+        "description": "Returns the caller's subject, capability list, authoritative assignment version and server time. Works without a login: an anonymous request returns the public capability set. Never returns an upstream identity-provider credential, token or claim set.",
+        "security": [{}, { "sessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Current session descriptor.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Session" } } }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "tags": ["catalog"],
+        "operationId": "getCatalog",
+        "summary": "Permitted layers, property projections, revisions and transport links.",
+        "description": "Authorized catalog of layers the caller may render: spatial publication transports (OGC API Tiles/Features, WMS, WFS via the same-origin gateway) plus domain transports. Each layer carries a closed propertyProjection allowlist; internal notes, gate codes, contacts and credentials can never appear there. Transport links resolve against the trusted service URL, never a raw upstream URL.",
+        "security": [{}, { "sessionCookie": [] }, { "scopedToken": [] }],
+        "responses": {
+          "200": {
+            "description": "Permitted layers with data revisions.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Catalog" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/sites": {
+      "get": {
+        "tags": ["sites"],
+        "operationId": "listSites",
+        "summary": "Paged sites filtered within caller scope; public projection for anonymous requests.",
+        "description": "Cursor-paginated site list constrained to the caller's scope. Anonymous requests receive the public projection only. The filter parameter is the canonical serialization of the typed FilterSet (stable multi-value ordering; never carries credentials, entitlement grants or private payload text).",
+        "security": [{}, { "sessionCookie": [] }, { "scopedToken": [] }],
+        "parameters": [
+          { "name": "filter", "in": "query", "required": false, "description": "URL-encoded serialized FilterSet (versioned canonical form).", "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Site page within scope, with effective filters.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SitePage" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/sites/{id}": {
+      "get": {
+        "tags": ["sites"],
+        "operationId": "getSite",
+        "summary": "Authorized site detail with permitted fields and current version.",
+        "description": "Site detail restricted to fields the caller may see; the internal block (gate codes, wiring notes) is stripped from every public projection. The response carries the current metadata version used for optimistic editing.",
+        "security": [{}, { "sessionCookie": [] }, { "scopedToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/SiteIdParam" }],
+        "responses": {
+          "200": {
+            "description": "Site detail with permitted fields.",
+            "headers": {
+              "ETag": { "description": "Current site metadata version, e.g. \"site-12\".", "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      },
+      "patch": {
+        "tags": ["sites"],
+        "operationId": "patchSite",
+        "summary": "Allowed metadata fields only, with version conflict check and audit.",
+        "description": "Partial metadata edit limited to fields the caller is permitted to change; moving a site to another system validates both current and destination scope. Requires an If-Match header carrying the current site version; a stale version returns 412, never a silent overwrite. Every change is audited with actor, time and before/after values.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/SiteIdParam" },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Current site metadata version, e.g. \"site-12\".",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SitePatchRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated site with a new version.",
+            "headers": {
+              "ETag": { "description": "New site metadata version after the edit.", "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/streams/{id}/observations": {
+      "get": {
+        "tags": ["observations"],
+        "operationId": "listStreamObservations",
+        "summary": "Bounded series with start/end, processing selector, aggregation and quality filters.",
+        "description": "Bounded time series for one datastream using half-open [start, end) instants. The processing selector chooses raw, provisional, reviewed or best-available values; a processing level is independent of publication status. Aggregation responses state units, time zone, coverage, estimated proportion and gap policy; a missing reading is never zero and unbounded gaps are never silently interpolated.",
+        "security": [{}, { "sessionCookie": [] }, { "scopedToken": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/StreamIdParam" },
+          { "name": "start", "in": "query", "required": true, "description": "Inclusive start instant, half-open [start, end).", "schema": { "type": "string" } },
+          { "name": "end", "in": "query", "required": true, "description": "Exclusive end instant, half-open [start, end).", "schema": { "type": "string" } },
+          { "name": "processingLevel", "in": "query", "required": false, "description": "Processing selector.", "schema": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"] } },
+          { "name": "statistic", "in": "query", "required": false, "description": "Aggregation statistic (governed identifier, e.g. daily-mean).", "schema": { "type": "string" } },
+          { "name": "interval", "in": "query", "required": false, "description": "Aggregation interval. DST-aware: a local day may be 23 or 25 hours.", "schema": { "type": "string", "enum": ["none", "hour", "day", "week", "month", "season", "water-year"] } },
+          { "name": "valueType", "in": "query", "required": false, "description": "Quality filter on observed vs estimated values.", "schema": { "type": "string", "enum": ["observed", "estimated", "computed"] } },
+          { "name": "qualifierIds", "in": "query", "required": false, "description": "Comma-separated governed qualifier ids.", "schema": { "type": "string" } },
+          { "name": "includeOutOfRange", "in": "query", "required": false, "description": "Include out-of-range values with an explicit label instead of hiding them.", "schema": { "type": "boolean", "default": true } },
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded observation page with coverage metadata.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ObservationPage" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      },
+      "post": {
+        "tags": ["observations"],
+        "operationId": "createManualObservation",
+        "summary": "Manual entry with unit, time, method, source and idempotency key.",
+        "description": "Manual measurement entry for an assigned site. Validation identifies the offending field and preserves valid inputs. Requires an Idempotency-Key header; replaying the same key returns the original result, and a different body under the same key is rejected. The actor is derived from the session.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/StreamIdParam" },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Client-generated unique key; retries with the same key and body return the original record.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ManualObservationCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Stored observation with its stable identifier.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Observation" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/observations/{key}/history": {
+      "get": {
+        "tags": ["revisions"],
+        "operationId": "getObservationHistory",
+        "summary": "Authorized revision history; redact internal reasons on public projections.",
+        "description": "Full revision history for one logical observation: original value, every appended revision with actor, timestamp, qualifiers and reason. Public projections redact internal reasons and hide revisions the caller may not see. Observation time and revision time are kept distinct.",
+        "security": [{}, { "sessionCookie": [] }, { "scopedToken": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ObservationKeyParam" },
+          { "$ref": "#/components/parameters/CursorParam" },
+          { "$ref": "#/components/parameters/LimitParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized revision history for the logical key.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ObservationHistory" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/observations/{key}/revisions": {
+      "post": {
+        "tags": ["revisions"],
+        "operationId": "createRevision",
+        "summary": "Append correction/exclusion using If-Match, qualifier IDs and required reason.",
+        "description": "Appends a correction, exclusion tombstone or processing-level advance to a logical observation. Revisions never overwrite earlier revisions. Requires an If-Match header carrying the current revision (e.g. \"revision-7\") and an Idempotency-Key; a stale If-Match returns 412 and replaying a key with a different body returns 409. Qualifier IDs come from the governed vocabulary; a reason is always required. The actor is derived from the session. See the example correction contract in the technical specification.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/ObservationKeyParam" },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "description": "Current revision id/version the new revision builds on, e.g. \"revision-7\".",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Client-generated unique key; the same key with a different body is rejected.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RevisionCreate" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Appended revision.",
+            "headers": {
+              "ETag": { "description": "New current revision id/version, e.g. \"revision-8\".", "schema": { "type": "string" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Revision" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/imports": {
+      "post": {
+        "tags": ["imports"],
+        "operationId": "createImport",
+        "summary": "Create scoped staged import; file metadata and private upload link.",
+        "description": "Creates a staged bulk import within the caller's scope and returns a private, expiring upload link. Nothing is saved to the measurement store until an explicit commit after validation.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional key to make import creation retries idempotent.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportCreateRequest" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "Staged import created with an upload link.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Import" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/imports/{id}/validate": {
+      "post": {
+        "tags": ["imports"],
+        "operationId": "validateImport",
+        "summary": "Preview parsing, units, timestamps, duplicates and per-row scope errors.",
+        "description": "Validates the whole staged batch and reports per-row errors: parsing, locale/time formats, unit mapping, duplicates and out-of-scope rows. Accepts at least a full year of ordinary daily readings per stream (366-row minimum scenario). No data is committed.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobIdParam" }],
+        "responses": {
+          "200": {
+            "description": "Validation preview with per-row errors.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportValidation" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/imports/{id}/commit": {
+      "post": {
+        "tags": ["imports"],
+        "operationId": "commitImport",
+        "summary": "Commit validated version once; recheck current scope and row versions.",
+        "description": "Commits a validated batch exactly once; duplicate submission does not create duplicate readings. Current scope and row versions are rechecked at commit time, and the response states precisely what committed. An atomic batch never partially saves silently.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          { "$ref": "#/components/parameters/JobIdParam" },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional key; a replayed commit returns the original commit result.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Commit result stating exactly what committed.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportCommitResult" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "412": { "$ref": "#/components/responses/PreconditionFailed" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/me/favorites/{siteId}": {
+      "put": {
+        "tags": ["preferences"],
+        "operationId": "putFavorite",
+        "summary": "Add favorite only if published or otherwise readable.",
+        "description": "Adds a site to the caller's favorites. The site must be published or otherwise readable by the caller; favoriting never creates an edit entitlement or extends a management role.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/SiteIdParam" }],
+        "responses": {
+          "200": {
+            "description": "Favorite recorded.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Favorite" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/me/notification-subscriptions/{id}": {
+      "put": {
+        "tags": ["preferences"],
+        "operationId": "putNotificationSubscription",
+        "summary": "Own subscriptions with current recipient/scope validation.",
+        "description": "Creates or updates one of the caller's own notification subscriptions. Recipient and scope are validated against current entitlements; a subscription can never widen access. Digest timing follows the steward-configured program time zone with weekday digest rules (a Monday digest covers the weekend without duplicate incidents).",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Subscription identifier, or a client-generated id for a new subscription.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationSubscription" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored subscription.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationSubscription" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/exports": {
+      "post": {
+        "tags": ["exports"],
+        "operationId": "createExport",
+        "summary": "Scoped asynchronous CSV/report jobs; reauthorize on download.",
+        "description": "Queues an asynchronous CSV or report export under normalized filters. Large jobs run under explicit row/time limits; the output manifest records the data revision snapshot. Every download is reauthorized at request time through a proxied, expiring link - never an independent reusable storage URL that bypasses revocation. CSV output neutralizes spreadsheet formula injection in user-controlled text.",
+        "security": [{ "sessionCookie": [] }, { "scopedToken": [] }],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Optional key; the same key with a different body is rejected.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ExportCreateRequest" } } }
+        },
+        "responses": {
+          "202": {
+            "description": "Queued export job.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AsyncJob" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/exports/{id}": {
+      "get": {
+        "tags": ["exports"],
+        "operationId": "getExport",
+        "summary": "Export job status; reauthorized, expiring download link on success.",
+        "description": "Polls an export job. A job cannot outlive a revoked permission: the download URL is proxied through the application and every download request checks current grants.",
+        "security": [{ "sessionCookie": [] }, { "scopedToken": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/JobIdParam" }],
+        "responses": {
+          "200": {
+            "description": "Job status with progress and, when succeeded, the expiring download link.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AsyncJob" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/me/api-tokens": {
+      "post": {
+        "tags": ["api-tokens"],
+        "operationId": "issueApiToken",
+        "summary": "Issue a scoped credential; secret shown once, hash stored at rest.",
+        "description": "Issues a non-browser scoped credential for researcher/programmatic access. The secret is shown exactly once; only a hash is stored. A token can never exceed the account's current authority, has rate limits independent of interactive sessions, and becomes useless the moment the underlying account or grant is revoked.",
+        "security": [{ "sessionCookie": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiTokenCreateRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Issued token; the secret appears exactly once in this response.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiTokenIssued" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/me/api-tokens/{id}": {
+      "delete": {
+        "tags": ["api-tokens"],
+        "operationId": "revokeApiToken",
+        "summary": "Revoke a scoped credential; revocation affects the next request.",
+        "description": "Revokes one of the caller's own scoped credentials. Revocation is authoritative: the next request presented with the token is denied regardless of any cache.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Token identifier (not the secret).",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token revoked.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiTokenRevoked" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/sites/{id}/visits": {
+      "post": {
+        "tags": ["visits"],
+        "operationId": "createVisit",
+        "summary": "Assigned field documentation and controlled attachment visibility.",
+        "description": "Records a field visit with actions and categorized attachments. Attachment visibility is controlled: internal photos, wiring details and gate codes never surface through public APIs, thumbnails, exports or report generation. Visit history survives equipment replacement.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/SiteIdParam" }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VisitCreateRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded visit.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Visit" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/admin/connections": {
+      "get": {
+        "tags": ["admin"],
+        "operationId": "listAdminConnections",
+        "summary": "Steward connection/task health and permission-checked deep links.",
+        "description": "Ingestion connection and task health for stewards. Distinguishes a failed provider connection from failed tasks; supports weekday digest timing with Monday weekend coverage; deep links target permission-checked filtered task views, never raw infrastructure.",
+        "security": [{ "sessionCookie": [] }],
+        "responses": {
+          "200": {
+            "description": "Connection/task health with permission-checked deep links.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConnectionHealth" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/admin/assignments/{id}": {
+      "put": {
+        "tags": ["admin"],
+        "operationId": "putAssignment",
+        "summary": "Steward grant/revoke with audit and entitlement invalidation.",
+        "description": "Creates or updates a scoped assignment grant. Every change is audited and immediately invalidates affected entitlement caches: the next protected request checks the authoritative assignment version or revocation state, so a stale cache can never extend access. Deputy delegations require explicit effective and expiry dates.",
+        "security": [{ "sessionCookie": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Assignment identifier, or a client-generated id for a new grant.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssignmentPutRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored assignment.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Entitlement" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    },
+    "/search/interpret": {
+      "post": {
+        "tags": ["search"],
+        "operationId": "interpretSearch",
+        "summary": "Proposed natural-language to allowlisted structured filters, no arbitrary SQL.",
+        "description": "Proposes a schema-valid FilterSet from a natural-language query, with visible explanations and chips the user can inspect and edit before applying. The same filter engine runs manual and interpreted queries. It cannot create SQL, call arbitrary URLs, infer additional permissions or perform writes; unsupported computed questions return a clear limitation. Prompt injection cannot expand grants.",
+        "security": [{}, { "sessionCookie": [] }, { "scopedToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SearchInterpretRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "Proposed structured filters with explanations; never applied automatically.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SearchInterpretResult" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthenticated" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session",
+        "description": "Secure, HttpOnly, SameSite browser session cookie issued after OIDC Authorization Code + PKCE login. Mutations additionally require CSRF protection and origin checks. Public browsing works without a login."
+      },
+      "scopedToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque scoped token",
+        "description": "Non-browser researcher credential issued via POST /me/api-tokens; scoped and revocable, with rate limits independent of interactive sessions. Cannot exceed the account's current authority."
+      }
+    },
+    "parameters": {
+      "CursorParam": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "description": "Opaque cursor from the previous page; stable sorting is guaranteed across pages.",
+        "schema": { "type": "string" }
+      },
+      "LimitParam": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "description": "Page size. Server-side maximum bounds apply; a page limit is not an authorization control.",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 500, "default": 100 }
+      },
+      "SiteIdParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Stable internal site (station) identifier. Display names are not identifiers and may repeat.",
+        "schema": { "type": "string" }
+      },
+      "StreamIdParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Datastream identifier.",
+        "schema": { "type": "string" }
+      },
+      "ObservationKeyParam": {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "description": "Composite logical observation key (stream + observed instant), e.g. str-corinne-q:2026-03-08T02:00:00Z.",
+        "schema": { "type": "string" }
+      },
+      "JobIdParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Import/export job identifier.",
+        "schema": { "type": "string" }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Malformed input (400).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "Unauthenticated": {
+        "description": "Missing or expired identity (401).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "Forbidden": {
+        "description": "Permitted object with forbidden operation, or a deliberate hidden-object response (403).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "NotFound": {
+        "description": "Unknown object, or a hidden object whose existence must not be disclosed (404).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "Conflict": {
+        "description": "Idempotency or content conflict (409).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "PreconditionFailed": {
+        "description": "Stale If-Match version (412); concurrent edits return a conflict instead of silently overwriting.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "ValidationError": {
+        "description": "Semantically invalid input, with field- or row-level detail (422).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded; retry information included (429).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      },
+      "DependencyUnavailable": {
+        "description": "An upstream dependency (database, spatial service, identity) is unavailable (503).",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      }
+    },
+    "schemas": {
+      "Problem": {
+        "title": "Problem",
+        "description": "Typed error payload shared by every /api/v1 route (RFC 9457-aligned). code is stable and machine-readable; message is human-readable and may change between versions. Status mapping: 400/422 malformed input, 401 missing or expired identity, 403 permitted object with forbidden operation, 404 used to avoid disclosing hidden object existence, 409 idempotency/content conflict, 412 stale If-Match, 429 rate limit with retry information, 503 unavailable dependency. A consistent hidden-object policy means 403 and 404 are chosen deliberately, never accidentally.",
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "type": { "type": "string", "description": "URI reference identifying the problem class." },
+          "title": { "type": "string", "description": "Short human title for the status class." },
+          "status": { "type": "integer", "description": "HTTP status code mirrored by the response." },
+          "code": { "type": "string", "enum": ["INVALID_REQUEST", "VALIDATION_FAILED", "UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "IDEMPOTENCY_CONFLICT", "PRECONDITION_FAILED", "RATE_LIMITED", "DEPENDENCY_UNAVAILABLE", "INTERNAL_ERROR"] },
+          "message": { "type": "string", "description": "Human-readable explanation; never includes credentials, tokens or restricted record payloads." },
+          "requestId": { "type": "string", "description": "Correlates with response headers and logs." },
+          "retryAfterSeconds": { "type": "integer", "description": "Present on RATE_LIMITED (429)." },
+          "details": { "type": "object", "description": "Structured field- or row-level detail for 400/422 responses." }
+        }
+      },
+      "FilterSet": {
+        "title": "FilterSet",
+        "description": "The one typed filter object shared by map, table, summary, chart and export requests across /api/v1 (FR-002, FR-065). Dimensions 1-20 are the named dimensions from the source requirements (S1 PDF pp. 13-15); processingLevels, datasetTypes, installationDateRange and seasonalityIds are the persona additions named in the technical specification. UNKNOWN VS ABSENT: an absent key means 'no constraint on this dimension'; the sentinel value \"unknown\" inside a multi-value array explicitly selects records whose value for that dimension is unknown or unset. These are different queries and must never be collapsed (e.g. telemetry:[\"telemetered\"] vs telemetry omitted vs telemetry:[\"unknown\"]). Multi-value arrays are OR within a dimension; dimensions AND together. Values are governed identifiers from the steward vocabulary unless an enum is given inline. Omit a dimension rather than sending an empty array.",
+        "type": "object",
+        "properties": {
+          "distributionSystemIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 1: distribution system identifiers. OR within, AND against other dimensions."
+          },
+          "systemGroupIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 2: system group identifiers."
+          },
+          "subgroupIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 3: subgroup identifiers within a distribution system."
+          },
+          "siteTypeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 4: site type identifiers."
+          },
+          "telemetry": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["telemetered", "manual", "unknown"] },
+            "description": "Dimension 5: telemetry availability, tri-state. \"unknown\" (telemetry status not established) differs from an absent key (no constraint). \"manual\" means no telemetry."
+          },
+          "providerIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 6: data provider identifiers."
+          },
+          "observedPropertyIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 7: observed property identifiers (governed vocabulary: discharge, stage, voltage at v0.1.0)."
+          },
+          "controlStructureIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 8: control structure identifiers."
+          },
+          "structureMaterialIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 9: structure material identifiers."
+          },
+          "structureSizeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 10: structure size class identifiers."
+          },
+          "waterSourceTypeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 11: water source type identifiers (surface, ground, storage, ...)."
+          },
+          "measuringDeviceTypeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 12: measuring device type identifiers."
+          },
+          "measurementMethodTypeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 13: measurement method type identifiers. The steward must decide whether this and dimension 20 (methodTypeIds) are distinct concepts before v0.2."
+          },
+          "observationTypeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 14: observation type identifiers."
+          },
+          "dataDateRange": {
+            "type": "object",
+            "description": "Dimension 15: available data date range. The mode is mandatory because the source requirement forbids inferring coverage meaning from an ambiguous label: \"any-data\" selects sites with any data in the period, \"complete-coverage\" requires full coverage of the period, \"available-since\" selects sites with data available on or after the start instant. Timestamps are RFC 3339 UTC instants.",
+            "required": ["mode"],
+            "properties": {
+              "mode": { "type": "string", "enum": ["any-data", "complete-coverage", "available-since"] },
+              "start": { "type": "string", "description": "Inclusive start instant, half-open interval [start, end)." },
+              "end": { "type": "string", "description": "Exclusive end instant, half-open interval [start, end)." }
+            }
+          },
+          "siteStatusIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 16: site status identifiers (active, inactive, proposed at v0.1.0)."
+          },
+          "stateCodes": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["UT", "ID", "WY"] },
+            "description": "Dimension 17: state code. The Bear River basin spans Utah, Idaho and Wyoming."
+          },
+          "timeStepIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 18: time step identifiers."
+          },
+          "aggregationStatisticIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 19: aggregation statistic identifiers (daily mean, daily total, ...)."
+          },
+          "methodTypeIds": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Dimension 20: method type identifiers. Overlaps dimension 13 in the source; steward decision pending."
+          },
+          "processingLevels": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"] },
+            "description": "Persona addition: processing level selection (governed vocabulary)."
+          },
+          "datasetTypes": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["measured", "estimated", "computed"] },
+            "description": "Persona addition: dataset type. Measured, estimated and computed are distinct accounting categories and are never silently summed."
+          },
+          "installationDateRange": {
+            "type": "object",
+            "description": "Persona addition (engineering): installation date range. Half-open [start, end); omit a bound to leave it open.",
+            "properties": {
+              "start": { "type": "string", "description": "Inclusive start instant." },
+              "end": { "type": "string", "description": "Exclusive end instant." }
+            }
+          },
+          "seasonalityIds": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["year-round", "seasonal"] },
+            "description": "Persona addition (engineering): operating seasonality. Seasonal sites suppress false missing-data incidents outside the active period."
+          }
+        }
+      },
+      "Session": {
+        "title": "Session",
+        "description": "Current subject descriptor. Never includes an upstream identity-provider credential or claim set.",
+        "type": "object",
+        "required": ["subjectId", "anonymous", "capabilities", "assignmentVersion", "serverTime", "requestId"],
+        "properties": {
+          "subjectId": { "type": "string", "description": "Immutable internal subject identifier, or 'anonymous'." },
+          "displayName": { "type": "string", "description": "Snapshot display name; preserved after offboarding without making the account usable." },
+          "anonymous": { "type": "boolean", "description": "True when no authenticated session is present; public capability set applies." },
+          "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Action-specific capabilities for THIS request context, not a role label." },
+          "assignmentVersion": { "type": ["integer", "null"], "description": "Authoritative assignment version checked on every protected request; null for anonymous." },
+          "serverTime": { "type": "string", "description": "Server UTC instant." },
+          "requestId": { "type": "string" }
+        }
+      },
+      "CatalogLayer": {
+        "title": "CatalogLayer",
+        "description": "One permitted layer in the authorized catalog returned by GET /catalog. Layers describe spatial publication transports (NeoServer OGC endpoints via the same-origin gateway) plus domain transports, with an explicit property projection: only fields listed in propertyProjection may appear in features, tiles and exports for that layer. A layer is delivered only when allow_public_read or allow_protected holds for the caller.",
+        "type": "object",
+        "required": ["id", "name", "layerType", "sourceUrl", "visibility", "propertyProjection", "dataRevision"],
+        "properties": {
+          "id": { "type": "string", "description": "Stable layer identifier used as the GeoLibre layer id." },
+          "name": { "type": "string", "description": "Display name." },
+          "layerType": { "type": "string", "enum": ["vector-tiles", "ogc-features", "wms", "wfs", "domain-json"], "description": "Transport family. MVT paths are z/y/x; WMS overlays prefer EPSG:3857; see the technical specification's transport table." },
+          "sourceUrl": { "type": "string", "description": "Same-origin gateway route (allowlisted path), never a raw upstream NeoServer URL." },
+          "visibility": { "type": "string", "enum": ["public", "cohort", "internal"], "description": "Publication class. Cohort layers require every member to be entitled to all published fields." },
+          "propertyProjection": { "type": "array", "items": { "type": "string" }, "description": "Closed allowlist of fields exposed by this layer. Gate codes, internal notes, contacts and credentials can never appear here." },
+          "dataRevision": { "type": "string", "description": "Publication revision token; changes when the backing publication view is refreshed." },
+          "attribution": { "type": "string" },
+          "styles": { "type": "object", "description": "Layer style hints (opacity, symbols, color ramps) keyed by style id." }
+        }
+      },
+      "Catalog": {
+        "title": "Catalog",
+        "description": "Authorized catalog response for GET /catalog.",
+        "type": "object",
+        "required": ["requestId", "dataRevision", "layers"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "dataRevision": { "type": "string", "description": "Publication revision snapshot for this response." },
+          "layers": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogLayer" } }
+        }
+      },
+      "Pagination": {
+        "title": "Pagination",
+        "description": "Cursor pagination envelope. Stable sorting across pages; server-side maximum bounds apply and a page limit is not an authorization control.",
+        "type": "object",
+        "required": ["limit", "hasMore"],
+        "properties": {
+          "nextCursor": { "type": ["string", "null"], "description": "Opaque cursor for the next page; null when hasMore is false." },
+          "hasMore": { "type": "boolean" },
+          "limit": { "type": "integer", "description": "Effective page size after server-side bounds." }
+        }
+      },
+      "Site": {
+        "title": "Site",
+        "description": "Station metadata entity (technical specification 'Station' and 'Datastream' rows). Geometry is EPSG:4326 with latitude/longitude axis order (see the axis-order note in fixtures/contracts/stations.json). The internal block (gate codes, wiring notes) is server-side only and must never appear in a public projection; row visibility alone is not sufficient (FR-049). Stations carry a version used by PATCH /sites/{id} If-Match conflict detection.",
+        "type": "object",
+        "required": ["id", "displayName", "systemId", "providerId", "status", "visibility", "telemetry", "stateCode", "latitude", "longitude", "version"],
+        "properties": {
+          "id": { "type": "string", "description": "Stable internal identifier. Display names are not identifiers and may repeat (see the shared-display-name fixture pair)." },
+          "displayName": { "type": "string", "description": "Human-facing label. Not unique; never a primary key." },
+          "externalId": { "type": "string", "description": "Legacy identifier preserved in the provider/external-ID mapping." },
+          "systemId": { "type": "string", "description": "Owning distribution system (or subgroup parent system)." },
+          "subgroupIds": { "type": "array", "items": { "type": "string" }, "description": "Governed group/subgroup memberships." },
+          "providerId": { "type": "string", "description": "Data provider identifier." },
+          "siteTypeId": { "type": "string", "description": "Site classification." },
+          "status": { "type": "string", "enum": ["proposed", "active", "inactive", "retired"], "description": "Lifecycle status." },
+          "visibility": { "type": "string", "enum": ["public", "restricted", "internal"], "description": "Record visibility class. Public sites may still carry internal-only fields." },
+          "telemetry": { "type": "string", "enum": ["telemetered", "manual", "unknown"], "description": "Tri-state telemetry availability; unknown differs from absent/no telemetry." },
+          "waterSourceTypeId": { "type": "string" },
+          "stateCode": { "type": "string" },
+          "latitude": { "type": "number", "description": "EPSG:4326 latitude. Utah fixtures use ~41-42 N." },
+          "longitude": { "type": "number", "description": "EPSG:4326 longitude. Utah fixtures use ~-111 to -113 (|longitude| ~111-113)." },
+          "elevationFt": { "type": "number" },
+          "ownerOrganizationId": { "type": "string", "description": "Water-owner organization for restricted-owner records." },
+          "version": { "type": "integer", "description": "Optimistic concurrency version for metadata edits." },
+          "internal": {
+            "type": ["object", "null"],
+            "description": "Fields that must be stripped from every public/cohort projection. Presence of this block on a public station is intentional fixture coverage.",
+            "properties": {
+              "gateCode": { "type": "string" },
+              "wiringNotes": { "type": "string" },
+              "visibility": { "type": "string", "enum": ["internal"] }
+            }
+          },
+          "datastreams": {
+            "type": "array",
+            "items": { "type": "object", "description": "Datastream: station, observed property, unit, method, cadence and capacity limits.", "required": ["id", "stationId", "observedPropertyId", "unitId", "cadenceMinutes", "visibility", "timeZone"], "properties": {
+              "id": { "type": "string" },
+              "stationId": { "type": "string" },
+              "observedPropertyId": { "type": "string" },
+              "unitId": { "type": "string" },
+              "methodTypeId": { "type": "string" },
+              "cadenceMinutes": { "type": "integer" },
+              "validRangeMin": { "type": "number", "description": "Inclusive physical/plausibility lower bound; values below are out-of-range, not merely suspect." },
+              "validRangeMax": { "type": "number", "description": "Inclusive upper bound; values above are out-of-range." },
+              "visibility": { "type": "string", "enum": ["public", "restricted", "internal"] },
+              "timeZone": { "type": "string", "description": "IANA zone used for display and day aggregation (America/Denver for Utah)." },
+              "deviceDeployments": { "type": "array", "items": { "type": "object", "properties": { "deviceId": { "type": "string" }, "installedAt": { "type": "string" }, "removedAt": { "type": ["string", "null"] } } }, "description": "Effective-dated device deployments; a replacement closes the old deployment and opens a dated new one." },
+              "ratingCurvePeriods": { "type": "array", "items": { "type": "object", "properties": { "id": { "type": "string" }, "validFrom": { "type": "string" }, "validTo": { "type": ["string", "null"] }, "method": { "type": "string" } } }, "description": "Effective-dated rating curve versions with method labels." }
+            } }
+          }
+        }
+      },
+      "SitePage": {
+        "title": "SitePage",
+        "description": "Paged site list response.",
+        "type": "object",
+        "required": ["requestId", "dataRevision", "pagination", "sites"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "dataRevision": { "type": "string" },
+          "effectiveFilters": { "$ref": "#/components/schemas/FilterSet" },
+          "pagination": { "$ref": "#/components/schemas/Pagination" },
+          "sites": { "type": "array", "items": { "$ref": "#/components/schemas/Site" } }
+        }
+      },
+      "Observation": {
+        "title": "Observation",
+        "description": "Original automated or manual observation (technical specification 'Original observation' row). Originals are immutable: corrections append revisions, they never overwrite. Observation time (observedAt, a UTC instant) and ingestion time (receivedAt) are distinct from the first release. sourceOffset preserves the source-local UTC offset at capture so DST transitions remain reconstructible. A null value is a reported-but-empty reading and is NOT zero; a missing reading is represented by the absence of an observation plus a declared gap.",
+        "type": "object",
+        "required": ["id", "logicalKey", "streamId", "observedAt", "sourceOffset", "unitId", "valueType", "processingLevel", "sourceEventId", "receivedAt"],
+        "properties": {
+          "id": { "type": "string", "description": "Stable observation identifier." },
+          "logicalKey": { "type": "string", "description": "Composite logical key (stream + observed instant) used by revision and history endpoints. Duplicate source events may share a logical key with distinct ids." },
+          "streamId": { "type": "string", "description": "Datastream identifier." },
+          "observedAt": { "type": "string", "description": "UTC instant the phenomenon was observed (RFC 3339, Z)." },
+          "sourceOffset": { "type": "string", "description": "Source-local UTC offset at capture, e.g. -07:00 (MST) or -06:00 (MDT)." },
+          "value": { "type": ["number", "null"], "description": "Source value in unitId. Null means reported no-value; zero means zero; both occur in fixtures." },
+          "unitId": { "type": "string", "description": "Governed unit identifier (source units are preserved)." },
+          "valueType": { "type": "string", "enum": ["observed", "estimated", "computed"], "description": "Observed versus estimated is preserved end-to-end and never silently converted." },
+          "processingLevel": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"], "description": "Level of THIS record. Originals enter as raw; revisions carry later levels." },
+          "sourceEventId": { "type": "string", "description": "Provider event identifier; unique within a stream. Retransmissions produce a new event id and may duplicate an instant." },
+          "receivedAt": { "type": "string", "description": "UTC instant the backend accepted the record. Late arrivals have receivedAt far after observedAt." },
+          "sourceId": { "type": "string", "description": "Ingestion source/provider record identifier." },
+          "methodTypeId": { "type": "string" },
+          "note": { "type": ["string", "null"], "description": "Provider or entry note." }
+        }
+      },
+      "Coverage": {
+        "title": "Coverage",
+        "description": "Coverage metadata for a bounded series or aggregation. Missing data stays missing; a missing reading is not zero; gaps beyond the configured threshold are excluded or explicitly estimated with a declared method.",
+        "type": "object",
+        "required": ["expectedCount", "presentCount", "gapPolicy"],
+        "properties": {
+          "expectedCount": { "type": "integer", "description": "Points the cadence implies over the requested bounds." },
+          "presentCount": { "type": "integer", "description": "Points actually present (duplicates counted once)." },
+          "estimatedProportion": { "type": "number", "description": "Fraction of returned values flagged estimated, 0-1." },
+          "gapPolicy": { "type": "string", "enum": ["reported", "excluded", "estimated"], "description": "How gaps were handled; never 'interpolated-silently'." },
+          "gaps": { "type": "array", "items": { "type": "object", "properties": { "start": { "type": "string" }, "end": { "type": "string" }, "reason": { "type": "string" } } }, "description": "Declared gaps intersecting the request bounds, half-open [start, end)." }
+        }
+      },
+      "ObservationPage": {
+        "title": "ObservationPage",
+        "description": "Bounded series response for GET /streams/{id}/observations.",
+        "type": "object",
+        "required": ["requestId", "dataRevision", "freshness", "pagination", "observations", "coverage"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "dataRevision": { "type": "string", "description": "Data revision snapshot of the returned series." },
+          "freshness": { "type": "string", "description": "Latest receivedAt visible to this caller; a missing reading never fabricates a zero or a timestamp." },
+          "effectiveFilters": { "$ref": "#/components/schemas/FilterSet" },
+          "pagination": { "$ref": "#/components/schemas/Pagination" },
+          "streamId": { "type": "string" },
+          "unitId": { "type": "string", "description": "Governed unit of the returned values." },
+          "observedPropertyId": { "type": "string" },
+          "timeZone": { "type": "string", "description": "Station/program zone used for aggregation boundaries (America/Denver for Utah); browser time never redefines a reporting day." },
+          "observations": { "type": "array", "items": { "$ref": "#/components/schemas/Observation" } },
+          "coverage": { "$ref": "#/components/schemas/Coverage" }
+        }
+      },
+      "Revision": {
+        "title": "Revision",
+        "description": "Appended correction, exclusion or processing-level advance against an original observation (technical specification 'Revision' row and the example correction contract). Revisions never overwrite earlier revisions; each carries the base revision it builds on so concurrent editors receive a conflict instead of silent overwrite (If-Match optimistic version). Exclusions are tombstones that retain provenance; physical deletion requires a separately ratified retention rule.",
+        "type": "object",
+        "required": ["id", "targetObservationId", "type", "processingLevel", "qualifierIds", "reason", "actorId", "recordedAt"],
+        "properties": {
+          "id": { "type": "string", "description": "Revision identifier; also the basis of the If-Match ETag (e.g. \"revision-7\")." },
+          "targetObservationId": { "type": "string", "description": "Observation this revision applies to." },
+          "baseRevisionId": { "type": ["string", "null"], "description": "Revision this one builds on; null when it is the first revision of the observation." },
+          "type": { "type": "string", "enum": ["correction", "exclusion", "level-advance"], "description": "correction replaces the value, exclusion tombstones the point (value null), level-advance re-states the value at a higher processing level." },
+          "value": { "type": ["number", "null"], "description": "Replacement value in unitId; null for exclusions." },
+          "unitId": { "type": "string", "description": "Unit of the replacement value (governed)." },
+          "excluded": { "type": "boolean", "description": "True for exclusion tombstones." },
+          "processingLevel": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"], "description": "Governed level this revision asserts. A reviewed value is not automatically public." },
+          "qualifierIds": { "type": "array", "items": { "type": "string" }, "description": "Governed qualifier identifiers (e.g. ice-affected, interpolate). Multiple qualifiers are allowed." },
+          "reason": { "type": "string", "description": "Required justification. Redacted from public projections of revision history when internal." },
+          "actorId": { "type": "string", "description": "Acting principal, always derived from the session/token server-side, never from a body field." },
+          "recordedAt": { "type": "string", "description": "UTC instant the revision was recorded; distinct from the observation time." },
+          "idempotencyKey": { "type": "string", "description": "Client idempotency key; replaying the same key with a different body is rejected." }
+        }
+      },
+      "ObservationHistory": {
+        "title": "ObservationHistory",
+        "description": "Revision history for one logical observation key, original first. Public projections redact internal reasons.",
+        "type": "object",
+        "required": ["requestId", "dataRevision", "logicalKey", "revisions"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "dataRevision": { "type": "string" },
+          "logicalKey": { "type": "string" },
+          "pagination": { "$ref": "#/components/schemas/Pagination" },
+          "original": { "$ref": "#/components/schemas/Observation", "description": "The immutable original observation(s) for this key (more than one when duplicate source events exist)." },
+          "revisions": { "type": "array", "items": { "$ref": "#/components/schemas/Revision" } }
+        }
+      },
+      "ManualObservationCreate": {
+        "title": "ManualObservationCreate",
+        "description": "Request body for POST /streams/{id}/observations. Validation identifies the offending field and preserves valid inputs. Observation time is an instant plus source offset; unit is governed; method and source are recorded. Actor is derived from the session; idempotency travels in the Idempotency-Key header.",
+        "type": "object",
+        "required": ["observedAt", "sourceOffset", "value", "unitId"],
+        "properties": {
+          "observedAt": { "type": "string", "description": "UTC instant (RFC 3339, Z) the measurement was taken." },
+          "sourceOffset": { "type": "string", "description": "Source-local UTC offset at measurement, e.g. -07:00 or -06:00 across the DST boundary." },
+          "value": { "type": ["number", "null"], "description": "Measured value in unitId; null records a reported no-value, not zero." },
+          "unitId": { "type": "string", "description": "Governed unit identifier." },
+          "methodTypeId": { "type": "string", "description": "Governed measurement method." },
+          "valueType": { "type": "string", "enum": ["observed", "estimated", "computed"], "description": "Defaults to observed; estimated requires a qualifier at review time." },
+          "note": { "type": "string", "description": "Optional entry note. Neutralized against CSV formula injection on export." }
+        }
+      },
+      "RevisionCreate": {
+        "title": "RevisionCreate",
+        "description": "Request body for POST /observations/{key}/revisions, matching the technical specification's example correction contract. If-Match and Idempotency-Key travel as headers. Actor is derived from the session.",
+        "type": "object",
+        "required": ["processingLevel", "qualifierIds", "reason"],
+        "properties": {
+          "value": { "type": ["number", "null"], "description": "Replacement value in unitId; omit for a pure level advance; null with type exclusion tombstones the point." },
+          "unitId": { "type": "string", "description": "Governed unit of the replacement value, e.g. cfs." },
+          "type": { "type": "string", "enum": ["correction", "exclusion", "level-advance"], "description": "Defaults to correction when a value is supplied." },
+          "processingLevel": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"], "description": "Governed level this revision asserts; must be an allowed transition for the caller." },
+          "qualifierIds": { "type": "array", "items": { "type": "string" }, "description": "Governed qualifier ids, e.g. [\"ice-affected\", \"interpolate\"]." },
+          "reason": { "type": "string", "minLength": 1, "description": "Required justification, e.g. 'Compared with field check and documented adjacent readings.'." }
+        }
+      },
+      "ImportCreateRequest": {
+        "title": "ImportCreateRequest",
+        "description": "Request body for POST /imports.",
+        "type": "object",
+        "required": ["fileName", "contentType", "streamIds"],
+        "properties": {
+          "fileName": { "type": "string", "description": "Original file name; treated as untrusted text." },
+          "contentType": { "type": "string", "description": "Declared content type (text/csv at v0.1.0)." },
+          "byteSize": { "type": "integer", "description": "Declared size for limit checks." },
+          "streamIds": { "type": "array", "items": { "type": "string" }, "description": "Target datastreams, all within the caller's scope." },
+          "timeZone": { "type": "string", "description": "Zone the file's local timestamps are expressed in; parsed explicitly, never inferred from the server locale." }
+        }
+      },
+      "Import": {
+        "title": "Import",
+        "description": "Staged import state. Upload link is private and expiring; nothing is saved until commit.",
+        "type": "object",
+        "required": ["id", "jobType", "status", "importState", "requestedBy", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "jobType": { "type": "string", "enum": ["import"] },
+          "status": { "type": "string", "enum": ["queued", "running", "succeeded", "failed", "cancelled"] },
+          "importState": { "type": "string", "enum": ["staged", "validated", "committed", "rejected"], "description": "Import lifecycle; commit happens exactly once." },
+          "requestedBy": { "type": "string" },
+          "uploadUrl": { "type": ["string", "null"], "description": "Private, expiring, proxied upload link; null once the file is received." },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" },
+          "expiresAt": { "type": ["string", "null"] },
+          "error": { "$ref": "#/components/schemas/Problem" }
+        }
+      },
+      "ImportValidation": {
+        "title": "ImportValidation",
+        "description": "Per-row validation preview for POST /imports/{id}/validate. The whole batch is validated; nothing commits.",
+        "type": "object",
+        "required": ["requestId", "importId", "status", "totalRows", "validRows", "errors"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "importId": { "type": "string" },
+          "status": { "type": "string", "enum": ["validated", "validated-with-errors", "failed"] },
+          "totalRows": { "type": "integer", "description": "A full 366-day daily fixture must validate in one batch." },
+          "validRows": { "type": "integer" },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["rowNumber", "code", "message"],
+              "properties": {
+                "rowNumber": { "type": "integer" },
+                "field": { "type": "string", "description": "Offending column/field when known." },
+                "code": { "type": "string", "description": "Stable code: PARSE_ERROR, UNIT_UNKNOWN, TIMESTAMP_INVALID, DUPLICATE_ROW, OUT_OF_SCOPE, RANGE_VIOLATION." },
+                "message": { "type": "string" },
+                "scopeError": { "type": "boolean", "description": "True when the row targets an object outside the caller's current scope." }
+              }
+            }
+          }
+        }
+      },
+      "ImportCommitResult": {
+        "title": "ImportCommitResult",
+        "description": "Result of POST /imports/{id}/commit. States precisely what committed; a duplicate submission creates no duplicate readings.",
+        "type": "object",
+        "required": ["requestId", "importId", "committedRevision", "acceptedRows"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "importId": { "type": "string" },
+          "committedRevision": { "type": "string", "description": "Data revision created by the commit." },
+          "acceptedRows": { "type": "integer" },
+          "duplicatesSkipped": { "type": "integer", "description": "Rows already present by logical key." },
+          "atomic": { "type": "boolean", "description": "True when the batch committed as one unit; partial mode reports row-level outcomes explicitly." }
+        }
+      },
+      "Favorite": {
+        "title": "Favorite",
+        "description": "A saved favorite site. Favorites never create edit entitlement.",
+        "type": "object",
+        "required": ["siteId", "createdAt"],
+        "properties": {
+          "siteId": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "requestId": { "type": "string" }
+        }
+      },
+      "NotificationSubscription": {
+        "title": "NotificationSubscription",
+        "description": "One of the caller's own subscriptions. Recipient and scope are validated against current entitlements; a subscription never widens access. Alert links repeat the authorization check.",
+        "type": "object",
+        "required": ["id", "channel", "scopeType", "cadence", "active"],
+        "properties": {
+          "id": { "type": "string" },
+          "channel": { "type": "string", "enum": ["email", "sms", "in-app"] },
+          "recipient": { "type": "string", "description": "Validated recipient address/target." },
+          "scopeType": { "type": "string", "enum": ["site", "stream", "system", "statewide"] },
+          "scopeId": { "type": ["string", "null"] },
+          "eventTypes": { "type": "array", "items": { "type": "string", "enum": ["new-site", "site-edit", "no-signal", "threshold-violation", "qc-violation"] } },
+          "cadence": { "type": "string", "enum": ["immediate", "hourly", "twice-daily", "daily", "weekly"] },
+          "active": { "type": "boolean" },
+          "requestId": { "type": "string" }
+        }
+      },
+      "AsyncJob": {
+        "title": "AsyncJob",
+        "description": "Asynchronous worker job for imports, exports, reports and QC evaluations (technical specification 'Import/export/report' row). Jobs are idempotent, retry with limits, and dead-letter visibly. An export job cannot outlive a revoked permission: every download URL is a proxied, expiring authorization-checked link, never an independent reusable storage URL.",
+        "type": "object",
+        "required": ["id", "jobType", "status", "requestedBy", "createdAt", "updatedAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "jobType": { "type": "string", "enum": ["import", "export", "report", "qc-evaluation"] },
+          "status": { "type": "string", "enum": ["queued", "running", "succeeded", "failed", "cancelled"], "description": "Terminal states are succeeded/failed/cancelled." },
+          "progressPercent": { "type": "integer", "description": "0-100; coarse progress for UI feedback." },
+          "requestedBy": { "type": "string", "description": "Requesting principal, derived from session or scoped token." },
+          "filters": { "type": "object", "description": "Normalized FilterSet snapshot the job was created under (exports/reports)." },
+          "dataRevision": { "type": "string", "description": "Data revision the job's snapshot was taken at." },
+          "createdAt": { "type": "string" },
+          "updatedAt": { "type": "string" },
+          "expiresAt": { "type": ["string", "null"], "description": "UTC instant the job record and its output manifest expire." },
+          "downloadUrl": { "type": ["string", "null"], "description": "Proxied, expiring, reauthorized download route; null until the job succeeds." },
+          "rowLimit": { "type": "integer", "description": "Explicit row/time limit applied to large exports." },
+          "error": {
+            "type": ["object", "null"],
+            "description": "Terminal failure detail using the shared Problem shape.",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      },
+      "ExportCreateRequest": {
+        "title": "ExportCreateRequest",
+        "description": "Request body for POST /exports.",
+        "type": "object",
+        "required": ["format", "filters"],
+        "properties": {
+          "format": { "type": "string", "enum": ["csv", "pdf"] },
+          "filters": { "$ref": "#/components/schemas/FilterSet" },
+          "processingLevels": { "type": "array", "items": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"] } },
+          "rowLimit": { "type": "integer", "description": "Explicit row/time limit; the server enforces its own maximum bounds." }
+        }
+      },
+      "ApiTokenCreateRequest": {
+        "title": "ApiTokenCreateRequest",
+        "description": "Request body for POST /me/api-tokens. Requested scopes can never exceed the account's current authority.",
+        "type": "object",
+        "required": ["label", "scopes"],
+        "properties": {
+          "label": { "type": "string" },
+          "scopes": { "type": "array", "items": { "type": "string", "enum": ["catalog:read", "sites:read", "observations:read", "history:read", "exports:create"] } },
+          "expiresAt": { "type": ["string", "null"], "description": "Requested expiry; server maximum applies." }
+        }
+      },
+      "ApiTokenIssued": {
+        "title": "ApiTokenIssued",
+        "description": "Response for POST /me/api-tokens. The secret appears exactly once here; only a hash is stored at rest.",
+        "type": "object",
+        "required": ["id", "label", "scopes", "secret", "issuedAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "scopes": { "type": "array", "items": { "type": "string" } },
+          "secret": { "type": "string", "description": "Shown once; never retrievable again." },
+          "issuedAt": { "type": "string" },
+          "expiresAt": { "type": ["string", "null"] },
+          "requestId": { "type": "string" }
+        }
+      },
+      "ApiTokenRevoked": {
+        "title": "ApiTokenRevoked",
+        "description": "Response for DELETE /me/api-tokens/{id}. Revocation is authoritative for the next request.",
+        "type": "object",
+        "required": ["id", "revokedAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "revokedAt": { "type": "string" },
+          "requestId": { "type": "string" }
+        }
+      },
+      "SitePatchRequest": {
+        "title": "SitePatchRequest",
+        "description": "Request body for PATCH /sites/{id}. Only permitted metadata fields; a system change validates both current and destination scope. Audited with actor, time and before/after values.",
+        "type": "object",
+        "minProperties": 1,
+        "properties": {
+          "displayName": { "type": "string" },
+          "externalId": { "type": "string" },
+          "siteTypeId": { "type": "string" },
+          "waterSourceTypeId": { "type": "string" },
+          "telemetry": { "type": "string", "enum": ["telemetered", "manual", "unknown"] },
+          "elevationFt": { "type": "number" },
+          "latitude": { "type": "number" },
+          "longitude": { "type": "number" },
+          "subgroupIds": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "VisitCreateRequest": {
+        "title": "VisitCreateRequest",
+        "description": "Request body for POST /sites/{id}/visits. Attachment visibility is controlled; internal photos, wiring details and gate codes never reach public projections.",
+        "type": "object",
+        "required": ["visitedAt", "visitType"],
+        "properties": {
+          "visitedAt": { "type": "string", "description": "UTC instant of the visit (device time plus offset when captured offline)." },
+          "visitType": { "type": "string", "enum": ["inspection", "maintenance", "measurement", "equipment-change", "rating"] },
+          "actions": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" },
+          "lastCheckedDate": { "type": ["string", "null"], "description": "Structured queryable field." },
+          "lastRatedDate": { "type": ["string", "null"], "description": "Structured queryable field." },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category", "visibility", "filename"],
+              "properties": {
+                "category": { "type": "string", "enum": ["photo-site", "photo-equipment", "photo-access", "document", "audio-note"] },
+                "visibility": { "type": "string", "enum": ["public", "restricted", "internal"] },
+                "filename": { "type": "string" },
+                "integrityHash": { "type": "string", "description": "Client-computed hash; verified on receipt." }
+              }
+            }
+          }
+        }
+      },
+      "Visit": {
+        "title": "Visit",
+        "description": "Recorded site visit. Visit history survives equipment replacement.",
+        "type": "object",
+        "required": ["id", "siteId", "actorId", "visitedAt", "visitType", "recordedAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "siteId": { "type": "string" },
+          "actorId": { "type": "string", "description": "Derived from the session." },
+          "visitedAt": { "type": "string" },
+          "visitType": { "type": "string" },
+          "actions": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" },
+          "attachments": { "type": "array", "items": { "type": "object" } },
+          "recordedAt": { "type": "string" },
+          "requestId": { "type": "string" }
+        }
+      },
+      "ConnectionHealth": {
+        "title": "ConnectionHealth",
+        "description": "Steward view of ingestion connection and task health. A failed provider connection is distinguished from failed tasks; deep links are permission-checked filtered views.",
+        "type": "object",
+        "required": ["requestId", "connections"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "digest": { "type": "object", "description": "Configured digest timing: program time zone, weekday schedule; a Monday digest includes the weekend interval without duplicate incidents.", "properties": { "timeZone": { "type": "string" }, "nextDigestAt": { "type": "string" } } },
+          "connections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "providerId", "systemId", "state", "failedTaskCount"],
+              "properties": {
+                "id": { "type": "string" },
+                "providerId": { "type": "string" },
+                "systemId": { "type": "string" },
+                "state": { "type": "string", "enum": ["ok", "failed-connection", "failed-tasks", "degraded"] },
+                "lastSuccessAt": { "type": ["string", "null"] },
+                "failedTaskCount": { "type": "integer" },
+                "deepLink": { "type": "string", "description": "Filtered, permission-checked task view; never a raw infrastructure URL." }
+              }
+            }
+          }
+        }
+      },
+      "AssignmentPutRequest": {
+        "title": "AssignmentPutRequest",
+        "description": "Request body for PUT /admin/assignments/{id}. Steward-only; every change is audited and invalidates entitlement caches immediately.",
+        "type": "object",
+        "required": ["principalId", "role", "scopeType", "status"],
+        "properties": {
+          "principalId": { "type": "string" },
+          "role": { "type": "string", "enum": ["engineer", "commissioner", "deputy", "steward", "researcher", "owner"] },
+          "capabilities": { "type": "array", "items": { "type": "string" } },
+          "scopeType": { "type": "string", "enum": ["system", "organization", "site", "statewide", "dataset"] },
+          "scopeId": { "type": ["string", "null"] },
+          "effectiveAt": { "type": "string" },
+          "expiresAt": { "type": ["string", "null"], "description": "Required for deputy delegations; the delegation lapses automatically at this instant." },
+          "delegation": {
+            "type": ["object", "null"],
+            "description": "Explicit delegation record for deputy grants.",
+            "properties": {
+              "effectiveAt": { "type": "string" },
+              "expiresAt": { "type": "string" },
+              "delegatedBy": { "type": "string" }
+            }
+          },
+          "status": { "type": "string", "enum": ["active", "revoked"] }
+        }
+      },
+      "Entitlement": {
+        "title": "Entitlement",
+        "description": "Assignment grant evaluated on every endpoint, queued job, download and spatial request (technical specification 'Assignment' row; allow_public_read OR allow_protected). Scoped object membership is resolved server-side; a body actorId or browser role switch never grants anything. Deputies act only through an explicit, time-bounded delegation - never automatically statewide. Concurrent revocation invalidates entitlement caches; the authoritative assignment version is rechecked on each protected request.",
+        "type": "object",
+        "required": ["id", "principalId", "role", "scopeType", "scopeId", "effectiveAt", "expiresAt", "status", "grantedBy", "grantVersion"],
+        "properties": {
+          "id": { "type": "string" },
+          "principalId": { "type": "string", "description": "Person or organization holding the grant." },
+          "role": { "type": "string", "enum": ["engineer", "commissioner", "deputy", "steward", "researcher", "owner"], "description": "Role family. Engineer sub-profiles (field, regional, automation, modeler) are capability subsets, not extra authority." },
+          "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Action-specific granted capabilities, e.g. enter-readings, revise-best-available, edit-site-metadata, create-sites, withdraw-raw." },
+          "scopeType": { "type": "string", "enum": ["system", "organization", "site", "statewide", "dataset"], "description": "Kind of object the grant is scoped to." },
+          "scopeId": { "type": ["string", "null"], "description": "Scoped object identifier; null only for statewide scope." },
+          "effectiveAt": { "type": "string", "description": "UTC instant the grant becomes valid." },
+          "expiresAt": { "type": ["string", "null"], "description": "UTC instant the grant lapses; null means no scheduled expiry." },
+          "status": { "type": "string", "enum": ["active", "revoked"], "description": "Authoritative status; revoked wins over any cached copy." },
+          "delegation": {
+            "type": ["object", "null"],
+            "description": "Present only for deputy grants: an explicit delegation with effective and expiry dates.",
+            "properties": {
+              "effectiveAt": { "type": "string" },
+              "expiresAt": { "type": "string" },
+              "delegatedBy": { "type": "string" }
+            }
+          },
+          "grantedBy": { "type": "string", "description": "Audited grantor principal." },
+          "grantVersion": { "type": "integer", "description": "Monotonic assignment version; protected requests compare against this to refuse stale caches." }
+        }
+      },
+      "SearchInterpretRequest": {
+        "title": "SearchInterpretRequest",
+        "description": "Request body for POST /search/interpret. The query is interpreted against the allowlisted filter vocabulary only.",
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string", "description": "Natural-language query, e.g. 'ice-affected weirs installed since 2015 in Cache County'." },
+          "context": {
+            "type": "object",
+            "description": "Current view context used to resolve relative phrases; never trusted as authorization input.",
+            "properties": {
+              "mapCenter": { "type": "array", "items": { "type": "number" }, "description": "[latitude, longitude] EPSG:4326." },
+              "zoom": { "type": "number" }
+            }
+          }
+        }
+      },
+      "SearchInterpretResult": {
+        "title": "SearchInterpretResult",
+        "description": "Proposed structured filters plus visible explanations. The proposal is applied only after the user inspects and confirms it; the engine never generates SQL, calls URLs or infers permissions.",
+        "type": "object",
+        "required": ["requestId", "query", "filters", "explanations"],
+        "properties": {
+          "requestId": { "type": "string" },
+          "query": { "type": "string" },
+          "filters": { "$ref": "#/components/schemas/FilterSet" },
+          "explanations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["text"],
+              "properties": {
+                "dimension": { "type": "string", "description": "FilterSet property the phrase mapped to." },
+                "value": { "type": "string" },
+                "text": { "type": "string", "description": "Human-readable explanation shown as a chip." },
+                "confidence": { "type": "string", "enum": ["exact", "synonym", "ambiguous"] }
+              }
+            }
+          },
+          "limitations": { "type": "array", "items": { "type": "string" }, "description": "Parts of the query that could not be mapped; computed/trend questions route here instead of fabricating values." }
+        }
+      }
+    }
+  }
+}

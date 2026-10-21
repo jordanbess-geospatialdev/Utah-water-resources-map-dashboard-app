@@ -1,0 +1,41 @@
+{
+  "$comment": "Distribution system hierarchy for the fixture world: exactly 2 distribution systems and 1 subgroup (seed utah-water-fixture-v1). Universal vocabulary and system membership are steward-managed (FR-012); membership history is retained but v0.1.0 fixtures carry only the current snapshot.",
+  "seed": "utah-water-fixture-v1",
+  "systems": [
+    {
+      "id": "sys-bear-river",
+      "name": "Bear River Distribution System",
+      "kind": "system",
+      "stateCodes": ["UT", "ID", "WY"],
+      "description": "Synthetic system covering the Bear River basin above the Great Salt Lake."
+    },
+    {
+      "id": "sys-weber-river",
+      "name": "Weber River Distribution System",
+      "kind": "system",
+      "stateCodes": ["UT"],
+      "description": "Synthetic system covering the Weber River basin."
+    }
+  ],
+  "subgroups": [
+    {
+      "id": "sub-bear-logan-canyon",
+      "systemId": "sys-bear-river",
+      "name": "Logan Canyon Subgroup",
+      "kind": "subgroup",
+      "description": "Single governed subgroup used to exercise the subgroup filter dimension."
+    }
+  ],
+  "providers": [
+    {
+      "id": "prov-dwri-telemetry",
+      "name": "DWRi Telemetry Network",
+      "kind": "telemetry"
+    },
+    {
+      "id": "prov-coop-manual",
+      "name": "Cooperator Manual Measurement Program",
+      "kind": "manual"
+    }
+  ]
+}

@@ -1,0 +1,216 @@
+{
+  "created_date": "2026-10-21",
+  "project": "Utah Water Measurement Dashboard",
+  "prototype_source_commit": "6ea21e744fd25f72ad4d01028acfbbc6b152d38b",
+  "private_site_url": "https://utah-water-persona-prototype.perky-yew-4670.chatgpt.site",
+  "deployment_id": "appgdep_6ad83db8494881918fa06192e7193d68",
+  "deployment_status": "succeeded",
+  "requirements": 78,
+  "backlog_tasks": 31,
+  "unit_tests_passed": 12,
+  "typescript": "passed",
+  "vite_build": "passed",
+  "browser_visual_qa": "unverified: environment URL policy refused local preview",
+  "files": [
+    {
+      "path": "output/README.md",
+      "bytes": 6731,
+      "sha256": "381e326702e0d47110e50836fee396b212f2acab7380900c5578ff6bc73be49d"
+    },
+    {
+      "path": "output/verification.md",
+      "bytes": 8537,
+      "sha256": "088d7f27685f28134a05fa6f2f45ad9d374c41977744445dbd5fe68d882fb9ff"
+    },
+    {
+      "path": "output/serve-prototype.mjs",
+      "bytes": 1638,
+      "sha256": "69a1b4393cccf5d6820f6f3fe1c412df32efc6756c727aeeddd56434d7483c29"
+    },
+    {
+      "path": "output/specifications/01-product-requirements.md",
+      "bytes": 44511,
+      "sha256": "ba0f5185628b2dba066d3ca5bf73a2f7b1364ac9eff47b667fbc160403d388e9"
+    },
+    {
+      "path": "output/specifications/02-technical-specification.md",
+      "bytes": 28108,
+      "sha256": "0861c1b125dd95bf376bfd8c0e1560ca58abc0e11d2a47d2ccbdb9061dae9ee1"
+    },
+    {
+      "path": "output/specifications/03-architecture.md",
+      "bytes": 14120,
+      "sha256": "bbc010b13f7843253e2707150b9f0642f904bf610040ae50716e47a06ac13ac0"
+    },
+    {
+      "path": "output/specifications/04-ai-development-and-testing.md",
+      "bytes": 33830,
+      "sha256": "d3c6bc4c7d0033f3d12304327e98dcac65139d3e587e55817d754bbfd561b26f"
+    },
+    {
+      "path": "output/specifications/backlog.json",
+      "bytes": 61570,
+      "sha256": "050570a41039d195a846147a17350c9983842f50fa515fc0bc9f47f1cfb8a6be"
+    },
+    {
+      "path": "output/specifications/requirements-traceability.csv",
+      "bytes": 31266,
+      "sha256": "4bfc44dd53130e1bbf52945246e017959bd135066bf31f42b020e58a854453a5"
+    },
+    {
+      "path": "output/specifications/templates/pull-request-template.md",
+      "bytes": 1621,
+      "sha256": "40519490ec1078f2d0785a01cb0a343ac49cc79f2777aa556b064f824edc7646"
+    },
+    {
+      "path": "output/specifications/templates/git-worktree-bootstrap.sh",
+      "bytes": 4669,
+      "sha256": "06e656e2c5b2bd2cdb684c3c154abdf59a08a021eb7f64e85509d049aa4a32b0"
+    },
+    {
+      "path": "output/research/geolibre-gcp.md",
+      "bytes": 10196,
+      "sha256": "5c95707d0d330a240be83a23ff5771886e7536ac995930910a44c2a6b6df8d2d"
+    },
+    {
+      "path": "output/research/neoserver.md",
+      "bytes": 10062,
+      "sha256": "3ac259ac3d64d7c6601d6b4ab00830b792370a62f2a7b59aa451cec88c041b0f"
+    },
+    {
+      "path": "output/prototype/.gitignore",
+      "bytes": 34,
+      "sha256": "ebfeac8471d08e121aef5a3795f3669d5b44f56d6e4e58ffd6817b99bb58edb1"
+    },
+    {
+      "path": "output/prototype/index.html",
+      "bytes": 437,
+      "sha256": "14d2df5a04de0686bfb86a7b29477de3d84ee666e383a2a468e0f9865f8523c0"
+    },
+    {
+      "path": "output/prototype/package.json",
+      "bytes": 839,
+      "sha256": "e66a2a8fb80b08d880957ee85f62ec043939134fc9a511b685bc841e689f6fe6"
+    },
+    {
+      "path": "output/prototype/pnpm-lock.yaml",
+      "bytes": 74557,
+      "sha256": "68cfd101beec866ead2423e85c33292ad111dbb550a5b4660c9d56efb5e397ea"
+    },
+    {
+      "path": "output/prototype/pnpm-workspace.yaml",
+      "bytes": 29,
+      "sha256": "ac02d96368617c760f093cfe61fdec64b6244007ab3553e0d6621f706f54a353"
+    },
+    {
+      "path": "output/prototype/README.md",
+      "bytes": 6869,
+      "sha256": "bfeac4b5492e69fb2668fe413773c4b9a46c2d63852b2b75b843a6d7427e083e"
+    },
+    {
+      "path": "output/prototype/tsconfig.json",
+      "bytes": 389,
+      "sha256": "9a737324d3624e8bfd528ef7c7e2ec5e102ea6233bf17d12068bdc4505a13ac4"
+    },
+    {
+      "path": "output/prototype/vite.config.ts",
+      "bytes": 144,
+      "sha256": "48edbc7f1e8110eafe5bf758a71f4f1043d419a7389b0df4d67669f293c74aba"
+    },
+    {
+      "path": "output/prototype/.openai/hosting.json",
+      "bytes": 106,
+      "sha256": "67fdec2811cdf9166fb05acc1ccb482de13687cf43c27a0a6998e3eef249257f"
+    },
+    {
+      "path": "output/prototype/dist/index.html",
+      "bytes": 538,
+      "sha256": "6f63d8883e146dd1235e5688accccfc01ade46e616928ef975da3e5f8a9e6510"
+    },
+    {
+      "path": "output/prototype/dist/assets/index-D9DUWKv5.css",
+      "bytes": 98029,
+      "sha256": "954bb82507eb80b8a828f60eaa3af3d4c920dd75871321cc679b0b8c4b694d16"
+    },
+    {
+      "path": "output/prototype/dist/assets/index-DgNtClfP.js",
+      "bytes": 2063587,
+      "sha256": "e8536a24b24ca9f120937b797681bc8628bf9205e4fe219ceb5a046839054c37"
+    },
+    {
+      "path": "output/prototype/src/adapters.ts",
+      "bytes": 2109,
+      "sha256": "3b610afccc7f25f71cf8e20ff198606a62c7a0a8e88bc7395f10a6faea97ae5f"
+    },
+    {
+      "path": "output/prototype/src/App.tsx",
+      "bytes": 25270,
+      "sha256": "e185d8f47f80abbc6c663da6faa38ff275b5ca7c05eebe4a0319c7203b8bbae1"
+    },
+    {
+      "path": "output/prototype/src/Chart.tsx",
+      "bytes": 3009,
+      "sha256": "136ba9eca6d9c3585f7d3f7bb97f688e46573d40007daa56eda15f5b76e6ccfa"
+    },
+    {
+      "path": "output/prototype/src/data.ts",
+      "bytes": 5852,
+      "sha256": "d4072a7a87e03e564a048b0cb3144a794d25f3c0ec4116bc582a1e2713eac20f"
+    },
+    {
+      "path": "output/prototype/src/main.tsx",
+      "bytes": 218,
+      "sha256": "601dd8366229b805dced13af8b355d114bee46690119cc4d10e8cdc01aa08fe2"
+    },
+    {
+      "path": "output/prototype/src/observations.ts",
+      "bytes": 2384,
+      "sha256": "0fee5976c707524bef1440cff2c28f118748bda7744265be0f26c2c79b48d916"
+    },
+    {
+      "path": "output/prototype/src/policy.ts",
+      "bytes": 2128,
+      "sha256": "e3d611709a61e95cda7e95fcb64c6b48353eb06709cf46db673407e0fa3e579c"
+    },
+    {
+      "path": "output/prototype/src/styles.css",
+      "bytes": 26531,
+      "sha256": "41d704e6788e92ac5994d066c1d041b7e4ed50223f7f7c54980f09330ad0f435"
+    },
+    {
+      "path": "output/prototype/src/WaterMap.tsx",
+      "bytes": 5433,
+      "sha256": "d5a17c0fd320e37de5d0b5334025d55c5b2b0e1e5cc19c47e06424e1a56493e2"
+    },
+    {
+      "path": "output/prototype/tests/adapters.test.ts",
+      "bytes": 1044,
+      "sha256": "e14cd2cccd2631b3d720634caa3047d815aab9ac0ea41b43a69ab1f3b124c891"
+    },
+    {
+      "path": "output/prototype/tests/observations.test.ts",
+      "bytes": 2978,
+      "sha256": "ddc20d4afbf140b36cf2bdab0ac0f0e65f10c5e4898db5b1592a19fec9c1d290"
+    },
+    {
+      "path": "output/prototype/tests/policy.test.ts",
+      "bytes": 1940,
+      "sha256": "f5133a1a61acacfe9de30f0a428c1fbfd9b553c178e74cccaecaf149940d4a7c"
+    },
+    {
+      "path": "Tech Services Staff Augmentation Scope of Work.pdf",
+      "bytes": 123123,
+      "sha256": "4f15763b51f332aee93af7f122f3f198c78286a2da9b42262a9c3581d8168f93"
+    },
+    {
+      "path": "Updated 2026 User-Centric_Design_Requirements_for_the_Water_Measurement_Data_Dashboard.pdf",
+      "bytes": 2596155,
+      "sha256": "9bf24fce21fd90b8e68d7df9958c29f2ce14541aca0fa3b28d7453b3618d6a0c"
+    },
+    {
+      "path": "Utah_DWRi_Technology_Modernization_Roadmap_9-26-2024.pdf",
+      "bytes": 3988498,
+      "sha256": "4f20649440514d2dd221676740090ed947863086a6858016bffe753892a40c55"
+    }
+  ]
+}

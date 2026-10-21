@@ -1,0 +1,879 @@
+{
+  "$comment": "WD-019 curated NL-filter evaluation set (FR-003 acceptance: 'The three metadata examples ... produce the same site IDs as manual filters'). The exact S1 PDF p.15 wording is not quoted anywhere in the repository, so fr003-metadata-1..3 are the three canonical metadata examples reconstructed from the requirement (system+telemetry, site type+property, processing+provider); every case below is executed by services/api/src/ai/filter-parser/equivalence.test.ts against the REAL WD-007 discovery engine (apps/web/src/features/discovery/filters.ts): the NL filterSet must deep-equal manualEquivalent, must be unchanged by the manual canonicalizer, and filterPublicStations must return expectedStationIds for both. matchedTerms inputs are normalized (lowercased, punctuation split). Display-only strings (clarification messages, date/unsupported limitation text) are asserted for presence, not wording; only the structural fields below are compared. Clock: the fixture seed fixed clock (deterministic relative dates).",
+  "seed": "utah-water-fixture-v1",
+  "clock": "2026-03-09T07:00:00Z",
+  "cases": [
+    {
+      "id": "fr003-metadata-1",
+      "utterance": "Show telemetered sites in the Bear River Distribution System",
+      "notes": "FR-003 example 1: system + telemetry.",
+      "expected": {
+        "filterSet": {
+          "distributionSystemIds": [
+            "sys-bear-river"
+          ],
+          "telemetry": [
+            "telemetered"
+          ]
+        },
+        "manualEquivalent": {
+          "distributionSystemIds": [
+            "sys-bear-river"
+          ],
+          "telemetry": [
+            "telemetered"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "telemetered",
+            "dimension": "telemetry",
+            "valueId": "telemetered",
+            "confidence": "exact"
+          },
+          {
+            "input": "bear river distribution system",
+            "dimension": "distributionSystemIds",
+            "valueId": "sys-bear-river",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne"
+        ]
+      }
+    },
+    {
+      "id": "fr003-metadata-2",
+      "utterance": "Flume sites with discharge",
+      "notes": "FR-003 example 2: site type + observed property.",
+      "expected": {
+        "filterSet": {
+          "siteTypeIds": [
+            "flume"
+          ],
+          "observedPropertyIds": [
+            "discharge"
+          ]
+        },
+        "manualEquivalent": {
+          "siteTypeIds": [
+            "flume"
+          ],
+          "observedPropertyIds": [
+            "discharge"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "flume",
+            "dimension": "siteTypeIds",
+            "valueId": "flume",
+            "confidence": "exact"
+          },
+          {
+            "input": "discharge",
+            "dimension": "observedPropertyIds",
+            "valueId": "discharge",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-hyrum-diversion-public"
+        ]
+      }
+    },
+    {
+      "id": "fr003-metadata-3",
+      "utterance": "Reviewed discharge from the DWRi Telemetry Network",
+      "notes": "FR-003 example 3: processing level + property + provider.",
+      "expected": {
+        "filterSet": {
+          "observedPropertyIds": [
+            "discharge"
+          ],
+          "processingLevels": [
+            "reviewed"
+          ],
+          "providerIds": [
+            "prov-dwri-telemetry"
+          ]
+        },
+        "manualEquivalent": {
+          "observedPropertyIds": [
+            "discharge"
+          ],
+          "processingLevels": [
+            "reviewed"
+          ],
+          "providerIds": [
+            "prov-dwri-telemetry"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "reviewed",
+            "dimension": "processingLevels",
+            "valueId": "reviewed",
+            "confidence": "exact"
+          },
+          {
+            "input": "discharge",
+            "dimension": "observedPropertyIds",
+            "valueId": "discharge",
+            "confidence": "exact"
+          },
+          {
+            "input": "dwri telemetry network",
+            "dimension": "providerIds",
+            "valueId": "prov-dwri-telemetry",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne"
+        ]
+      }
+    },
+    {
+      "id": "synonyms-weber-empty",
+      "utterance": "real-time flow in the Weber River system",
+      "notes": "Synonym confidence ('real time'→telemetered, 'flow'→discharge, 'weber river'→system); no public Weber station exists, NL and manual both return empty.",
+      "expected": {
+        "filterSet": {
+          "distributionSystemIds": [
+            "sys-weber-river"
+          ],
+          "observedPropertyIds": [
+            "discharge"
+          ],
+          "telemetry": [
+            "telemetered"
+          ]
+        },
+        "manualEquivalent": {
+          "distributionSystemIds": [
+            "sys-weber-river"
+          ],
+          "observedPropertyIds": [
+            "discharge"
+          ],
+          "telemetry": [
+            "telemetered"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "real time",
+            "dimension": "telemetry",
+            "valueId": "telemetered",
+            "confidence": "synonym"
+          },
+          {
+            "input": "flow",
+            "dimension": "observedPropertyIds",
+            "valueId": "discharge",
+            "confidence": "synonym"
+          },
+          {
+            "input": "weber river",
+            "dimension": "distributionSystemIds",
+            "valueId": "sys-weber-river",
+            "confidence": "synonym"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": []
+      }
+    },
+    {
+      "id": "or-within-dimension",
+      "utterance": "flume or natural channel sites",
+      "notes": "OR within a dimension (multi-value union).",
+      "expected": {
+        "filterSet": {
+          "siteTypeIds": [
+            "flume",
+            "natural-channel"
+          ]
+        },
+        "manualEquivalent": {
+          "siteTypeIds": [
+            "natural-channel",
+            "flume"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "flume",
+            "dimension": "siteTypeIds",
+            "valueId": "flume",
+            "confidence": "exact"
+          },
+          {
+            "input": "natural channel",
+            "dimension": "siteTypeIds",
+            "valueId": "natural-channel",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne",
+          "sta-hyrum-diversion-public"
+        ]
+      }
+    },
+    {
+      "id": "status-and-subgroup",
+      "utterance": "inactive sites in the Logan Canyon subgroup",
+      "notes": "AND across dimensions (status × subgroup); 'logan canyon' is a shortened registry label (synonym).",
+      "expected": {
+        "filterSet": {
+          "siteStatusIds": [
+            "inactive"
+          ],
+          "subgroupIds": [
+            "sub-bear-logan-canyon"
+          ]
+        },
+        "manualEquivalent": {
+          "siteStatusIds": [
+            "inactive"
+          ],
+          "subgroupIds": [
+            "sub-bear-logan-canyon"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "inactive",
+            "dimension": "siteStatusIds",
+            "valueId": "inactive",
+            "confidence": "exact"
+          },
+          {
+            "input": "logan canyon subgroup",
+            "dimension": "subgroupIds",
+            "valueId": "sub-bear-logan-canyon",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-summit-creek-inactive"
+        ]
+      }
+    },
+    {
+      "id": "ambiguous-weir",
+      "utterance": "weir measurements",
+      "notes": "'weir' answers to two dimensions (site type vs measurement method): clarification with both candidates, nothing guessed, nothing applied. (An unconstrained FilterSet matches every public site; the panel blocks Apply until the clarification is resolved, so the empty proposal never runs silently.)",
+      "expected": {
+        "filterSet": {},
+        "manualEquivalent": {},
+        "matchedTerms": [],
+        "unknownTerms": [],
+        "needsClarification": true,
+        "clarifications": [
+          {
+            "kind": "ambiguous",
+            "term": "weir",
+            "candidates": [
+              {
+                "dimension": "siteTypeIds",
+                "valueId": "weir",
+                "label": "Weir"
+              },
+              {
+                "dimension": "measurementMethodTypeIds",
+                "valueId": "method-weir-board",
+                "label": "Weir board"
+              }
+            ]
+          }
+        ],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne",
+          "sta-hyrum-diversion-public",
+          "sta-summit-creek-inactive"
+        ]
+      }
+    },
+    {
+      "id": "weir-board-resolves",
+      "utterance": "weir board measurements",
+      "notes": "The longer phrase resolves the ambiguity deterministically (longest-match-first).",
+      "expected": {
+        "filterSet": {
+          "measurementMethodTypeIds": [
+            "method-weir-board"
+          ]
+        },
+        "manualEquivalent": {
+          "measurementMethodTypeIds": [
+            "method-weir-board"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "weir board",
+            "dimension": "measurementMethodTypeIds",
+            "valueId": "method-weir-board",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-summit-creek-inactive"
+        ]
+      }
+    },
+    {
+      "id": "unknown-term",
+      "utterance": "quagga mussels at gauge sites",
+      "notes": "Unrecognized content words REQUIRE clarification; never guessed into a filter value. (An unconstrained FilterSet matches every public site; the panel blocks Apply until the clarification is resolved, so the empty proposal never runs silently.)",
+      "expected": {
+        "filterSet": {},
+        "manualEquivalent": {},
+        "matchedTerms": [],
+        "unknownTerms": [
+          "quagga mussels"
+        ],
+        "needsClarification": true,
+        "clarifications": [
+          {
+            "kind": "unknown",
+            "term": "quagga mussels",
+            "candidates": []
+          }
+        ],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne",
+          "sta-hyrum-diversion-public",
+          "sta-summit-creek-inactive"
+        ]
+      }
+    },
+    {
+      "id": "relative-date-last-week",
+      "utterance": "stage data from the last week",
+      "notes": "Relative date parses (injected clock) but stays a pending-governance draft: the FilterSet schema has no governed date dimension, so the range is inspectable and NOT applied.",
+      "expected": {
+        "filterSet": {
+          "observedPropertyIds": [
+            "stage"
+          ]
+        },
+        "manualEquivalent": {
+          "observedPropertyIds": [
+            "stage"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "stage",
+            "dimension": "observedPropertyIds",
+            "valueId": "stage",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [
+          {
+            "input": "last week",
+            "kind": "relative",
+            "start": "2026-03-02T07:00:00Z",
+            "end": "2026-03-09T07:00:00Z",
+            "status": "pending-governance"
+          }
+        ],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne"
+        ]
+      }
+    },
+    {
+      "id": "absolute-date-since-march-1",
+      "utterance": "manual measurements since March 1",
+      "notes": "Absolute 'since' date (year defaults to the clock year, UTC); metadata filter applies, date stays pending.",
+      "expected": {
+        "filterSet": {
+          "telemetry": [
+            "manual"
+          ]
+        },
+        "manualEquivalent": {
+          "telemetry": [
+            "manual"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "manual",
+            "dimension": "telemetry",
+            "valueId": "manual",
+            "confidence": "synonym"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [
+          {
+            "input": "since march 1",
+            "kind": "absolute-since",
+            "start": "2026-03-01T00:00:00Z",
+            "end": "2026-03-09T07:00:00Z",
+            "status": "pending-governance"
+          }
+        ],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-hyrum-diversion-public",
+          "sta-summit-creek-inactive"
+        ]
+      }
+    },
+    {
+      "id": "water-year-pending-owner",
+      "utterance": "best available water year 2025 data",
+      "notes": "Water-year phrasing is flagged unsupported-pending-owner with NO computed range; the processing-level filter still applies.",
+      "expected": {
+        "filterSet": {
+          "processingLevels": [
+            "best-available"
+          ]
+        },
+        "manualEquivalent": {
+          "processingLevels": [
+            "best-available"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "best available",
+            "dimension": "processingLevels",
+            "valueId": "best-available",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [
+          {
+            "input": "water year 2025",
+            "kind": "water-year",
+            "start": null,
+            "end": null,
+            "status": "unsupported-pending-owner"
+          }
+        ],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne"
+        ]
+      }
+    },
+    {
+      "id": "computed-declining-flow",
+      "utterance": "rapidly declining flow in the Bear River system",
+      "notes": "S1 p.16 computed question: explicit limitation (routes to future analytics), no fabricated values; recognized metadata filters still proposed and inspectable. Every public Bear River station carries discharge, so the equivalent manual filter selects all three.",
+      "expected": {
+        "filterSet": {
+          "distributionSystemIds": [
+            "sys-bear-river"
+          ],
+          "observedPropertyIds": [
+            "discharge"
+          ]
+        },
+        "manualEquivalent": {
+          "distributionSystemIds": [
+            "sys-bear-river"
+          ],
+          "observedPropertyIds": [
+            "discharge"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "flow",
+            "dimension": "observedPropertyIds",
+            "valueId": "discharge",
+            "confidence": "synonym"
+          },
+          {
+            "input": "bear river",
+            "dimension": "distributionSystemIds",
+            "valueId": "sys-bear-river",
+            "confidence": "synonym"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [
+          {
+            "input": "rapidly declining",
+            "capability": "computed-analysis"
+          }
+        ],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne",
+          "sta-hyrum-diversion-public",
+          "sta-summit-creek-inactive"
+        ]
+      }
+    },
+    {
+      "id": "computed-reservoir-release",
+      "utterance": "current reservoir release from Hyrum",
+      "notes": "S1 p.16 computed question with no metadata terms: clear limitation plus clarification for the unrecognized name; empty proposal is never silently applied. (An unconstrained FilterSet matches every public site; the panel blocks Apply until the clarification is resolved, so the empty proposal never runs silently.)",
+      "expected": {
+        "filterSet": {},
+        "manualEquivalent": {},
+        "matchedTerms": [],
+        "unknownTerms": [
+          "hyrum"
+        ],
+        "needsClarification": true,
+        "clarifications": [
+          {
+            "kind": "unknown",
+            "term": "hyrum",
+            "candidates": []
+          }
+        ],
+        "dateFilters": [],
+        "unsupported": [
+          {
+            "input": "current reservoir release",
+            "capability": "computed-analysis"
+          }
+        ],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne",
+          "sta-hyrum-diversion-public",
+          "sta-summit-creek-inactive"
+        ]
+      }
+    },
+    {
+      "id": "voltage-selects-nothing-public",
+      "utterance": "battery voltage sites",
+      "notes": "Governed internal-diagnostic property: a legal filter that selects nothing on the public map (no leak, no expansion).",
+      "expected": {
+        "filterSet": {
+          "observedPropertyIds": [
+            "voltage"
+          ]
+        },
+        "manualEquivalent": {
+          "observedPropertyIds": [
+            "voltage"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "battery voltage",
+            "dimension": "observedPropertyIds",
+            "valueId": "voltage",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": []
+      }
+    },
+    {
+      "id": "storage-release-inspectable-unknown",
+      "utterance": "storage release sites",
+      "notes": "A classification carried only by a RESTRICTED station: stays a well-formed, inspectable, unknown-vocabulary filter value that matches nothing publicly — the restricted station is not representable and nothing about it leaks.",
+      "expected": {
+        "filterSet": {
+          "waterSourceTypeIds": [
+            "surface-storage-release"
+          ]
+        },
+        "manualEquivalent": {
+          "waterSourceTypeIds": [
+            "surface-storage-release"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "storage release",
+            "dimension": "waterSourceTypeIds",
+            "valueId": "surface-storage-release",
+            "confidence": "synonym"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": []
+      }
+    },
+    {
+      "id": "hourly-provisional",
+      "utterance": "hourly provisional data",
+      "notes": "Derived time-step dimension + processing level.",
+      "expected": {
+        "filterSet": {
+          "timeStepIds": [
+            "hourly"
+          ],
+          "processingLevels": [
+            "provisional"
+          ]
+        },
+        "manualEquivalent": {
+          "timeStepIds": [
+            "hourly"
+          ],
+          "processingLevels": [
+            "provisional"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "hourly",
+            "dimension": "timeStepIds",
+            "valueId": "hourly",
+            "confidence": "exact"
+          },
+          {
+            "input": "provisional",
+            "dimension": "processingLevels",
+            "valueId": "provisional",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne"
+        ]
+      }
+    },
+    {
+      "id": "telemetry-unknown-sentinel",
+      "utterance": "sites with unknown telemetry",
+      "notes": "The telemetry tri-state 'unknown' is a REAL value (not a missing filter); no public station carries it at this seed.",
+      "expected": {
+        "filterSet": {
+          "telemetry": [
+            "unknown"
+          ]
+        },
+        "manualEquivalent": {
+          "telemetry": [
+            "unknown"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "unknown telemetry",
+            "dimension": "telemetry",
+            "valueId": "unknown",
+            "confidence": "synonym"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": []
+      }
+    },
+    {
+      "id": "daily-ungoverned-time-step",
+      "utterance": "daily sites",
+      "notes": "'daily' is in the deterministic derivation domain but no public stream carries it: kept as an inspectable unknown-value filter matching nothing (FR-060 semantics).",
+      "expected": {
+        "filterSet": {
+          "timeStepIds": [
+            "daily"
+          ]
+        },
+        "manualEquivalent": {
+          "timeStepIds": [
+            "daily"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "daily",
+            "dimension": "timeStepIds",
+            "valueId": "daily",
+            "confidence": "exact"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": []
+      }
+    },
+    {
+      "id": "approved-synonym",
+      "utterance": "approved data from the cooperator",
+      "notes": "Synonym 'approved'→reviewed and shortened provider 'cooperator'.",
+      "expected": {
+        "filterSet": {
+          "processingLevels": [
+            "reviewed"
+          ],
+          "providerIds": [
+            "prov-coop-manual"
+          ]
+        },
+        "manualEquivalent": {
+          "processingLevels": [
+            "reviewed"
+          ],
+          "providerIds": [
+            "prov-coop-manual"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "approved",
+            "dimension": "processingLevels",
+            "valueId": "reviewed",
+            "confidence": "synonym"
+          },
+          {
+            "input": "cooperator",
+            "dimension": "providerIds",
+            "valueId": "prov-coop-manual",
+            "confidence": "synonym"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": []
+      }
+    },
+    {
+      "id": "multi-value-telemetry",
+      "utterance": "telemetered and manual sites",
+      "notes": "Two values in one dimension are OR (documented; the chips show exactly what would run).",
+      "expected": {
+        "filterSet": {
+          "telemetry": [
+            "manual",
+            "telemetered"
+          ]
+        },
+        "manualEquivalent": {
+          "telemetry": [
+            "telemetered",
+            "manual"
+          ]
+        },
+        "matchedTerms": [
+          {
+            "input": "telemetered",
+            "dimension": "telemetry",
+            "valueId": "telemetered",
+            "confidence": "exact"
+          },
+          {
+            "input": "manual",
+            "dimension": "telemetry",
+            "valueId": "manual",
+            "confidence": "synonym"
+          }
+        ],
+        "unknownTerms": [],
+        "needsClarification": false,
+        "clarifications": [],
+        "dateFilters": [],
+        "unsupported": [],
+        "securityFindingIds": [],
+        "expectedStationIds": [
+          "sta-bear-corinne",
+          "sta-hyrum-diversion-public",
+          "sta-summit-creek-inactive"
+        ]
+      }
+    }
+  ]
+}

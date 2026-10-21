@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/async-job.json",
+  "title": "AsyncJob",
+  "description": "Asynchronous worker job for imports, exports, reports and QC evaluations (technical specification 'Import/export/report' row). Jobs are idempotent, retry with limits, and dead-letter visibly. An export job cannot outlive a revoked permission: every download URL is a proxied, expiring authorization-checked link, never an independent reusable storage URL.",
+  "type": "object",
+  "required": ["id", "jobType", "status", "requestedBy", "createdAt", "updatedAt"],
+  "properties": {
+    "id": { "type": "string" },
+    "jobType": { "type": "string", "enum": ["import", "export", "report", "qc-evaluation"] },
+    "status": { "type": "string", "enum": ["queued", "running", "succeeded", "failed", "cancelled"], "description": "Terminal states are succeeded/failed/cancelled." },
+    "progressPercent": { "type": "integer", "description": "0-100; coarse progress for UI feedback." },
+    "requestedBy": { "type": "string", "description": "Requesting principal, derived from session or scoped token." },
+    "filters": { "type": "object", "description": "Normalized FilterSet snapshot the job was created under (exports/reports)." },
+    "dataRevision": { "type": "string", "description": "Data revision the job's snapshot was taken at." },
+    "createdAt": { "type": "string" },
+    "updatedAt": { "type": "string" },
+    "expiresAt": { "type": ["string", "null"], "description": "UTC instant the job record and its output manifest expire." },
+    "downloadUrl": { "type": ["string", "null"], "description": "Proxied, expiring, reauthorized download route; null until the job succeeds." },
+    "rowLimit": { "type": "integer", "description": "Explicit row/time limit applied to large exports." },
+    "error": {
+      "type": ["object", "null"],
+      "description": "Terminal failure detail using the shared Problem shape.",
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    }
+  }
+}

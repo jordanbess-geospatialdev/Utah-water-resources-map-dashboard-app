@@ -1,0 +1,17 @@
+{
+  "name": "utah-water-dashboard",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Utah Water Measurement Data Dashboard - monorepo per ADR-13 (protected main/integration, one task per feat branch per worktree)",
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "pnpm -r --if-present run lint",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "test": "pnpm -r --if-present run test",
+    "test:unit": "pnpm test",
+    "gate": "node scripts/gate.mjs"
+  }
+}

@@ -1,0 +1,4 @@
+Layer: stations
+  display_name: Bear River near Corinne
+  status: active
+  station_id: sta-bear-corinne

@@ -1,0 +1,7 @@
+neoserver-1  | {"time":"2026-10-21T11:52:05.927555014Z","level":"INFO","msg":"backing store opened","path":"/data/neoserver.db"}
+neoserver-1  | {"time":"2026-10-21T11:52:05.99756724Z","level":"INFO","msg":"preloaded DuckDB extension","extension":"spatial","duration_ms":60.873}
+neoserver-1  | {"time":"2026-10-21T11:52:06.012471611Z","level":"INFO","msg":"preloaded DuckDB extension","extension":"httpfs","duration_ms":14.826}
+neoserver-1  | {"time":"2026-10-21T11:52:06.016332267Z","level":"INFO","msg":"cache manager initialized","capabilities_enabled":true,"collections_enabled":true,"features_enabled":true,"tiles_enabled":true}
+neoserver-1  | {"time":"2026-10-21T11:52:06.047461522Z","level":"INFO","msg":"workspace registry loaded","workspaces":0}
+neoserver-1  | {"time":"2026-10-21T11:52:06.072773468Z","level":"INFO","msg":"http server starting","addr":"0.0.0.0:9000","basePath":""}
+postgis-1  | PostgreSQL init process complete; ready for start up.
