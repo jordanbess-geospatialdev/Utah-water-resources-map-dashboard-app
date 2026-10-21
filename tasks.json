@@ -220,7 +220,8 @@
         "WD-014"
       ],
       "release": "MVP",
-      "status": "in_progress"
+      "status": "completed",
+      "merged_commit": "fade61d71bb1bdd44bb702dd201290adc8aa1b96"
     },
     {
       "id": "WD-014",
@@ -437,7 +438,8 @@
         "WD-011"
       ],
       "release": "MVP",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "fdc1774a26a57e7b68dc912d701ca48d5b5d0332"
     },
     {
       "id": "WD-011-R2",
