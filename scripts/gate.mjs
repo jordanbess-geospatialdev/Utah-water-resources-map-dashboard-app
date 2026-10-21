@@ -16,7 +16,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const git = (args) => execSync(`git ${args}`, { encoding: 'utf8', cwd: ROOT }).trim();
+const git = (args) => execSync(`git ${args}`, { encoding: 'utf8', cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
 const base = process.env.BASE_REF || 'integration';
 const branch = git('rev-parse --abbrev-ref HEAD');
 

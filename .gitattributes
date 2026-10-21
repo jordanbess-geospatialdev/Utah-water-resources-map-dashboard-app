@@ -1,0 +1,7 @@
+# Force LF in the working tree on every platform; shell hooks and scripts
+# break under CRLF on Windows checkouts.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.pbf binary
