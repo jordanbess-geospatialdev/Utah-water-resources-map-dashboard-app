@@ -531,7 +531,8 @@
         "WD-011"
       ],
       "release": "R2",
-      "status": "in_progress"
+      "status": "completed",
+      "merged_commit": "63d395f6779e6aa1b5ede61db70cd6009e0d60c0"
     },
     {
       "id": "WD-026",
