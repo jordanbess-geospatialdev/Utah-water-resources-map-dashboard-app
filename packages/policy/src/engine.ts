@@ -51,6 +51,7 @@ import {
   OWN_ACCOUNT_ACTIONS,
   PUBLIC_ACTIONS,
   RESTRICTED_FIELD_READ_CAPABILITIES,
+  SATISFACTION_ROLE_GATES,
 } from './matrix.ts';
 
 // ---------------------------------------------------------------------------
@@ -301,6 +302,34 @@ export function satisfiesCapability(action: string, granted: readonly Capability
   return satisfiers.some((s) => granted.includes(s));
 }
 
+/**
+ * Persona-gate check (WD-004 / DEFECT-Q3): a satisfier bound in
+ * SATISFACTION_ROLE_GATES for the requested action only satisfies when the
+ * requesting principal belongs to one of the gate's role families. A role
+ * label never grants anything by itself; like the deputy delegation checks
+ * in isWithinValidity, it can only NARROW what a granted capability
+ * satisfies. Ungated satisfiers are always permitted.
+ */
+function satisfierPermitted(action: string, satisfier: string, principal: Principal | null): boolean {
+  const gate = SATISFACTION_ROLE_GATES[action]?.[satisfier];
+  if (!gate) return true;
+  if (!principal) return false;
+  return principal.roles.some((role) => gate.includes(role));
+}
+
+/**
+ * Principal-aware form of satisfiesCapability: the table question plus the
+ * persona gates from matrix.ts. This is what `evaluate` consults, so a bare
+ * statewide-administration grant satisfies field-visits only for the
+ * steward persona family (ROLE_CEILING.steward carries the grant but does
+ * not list field-visits); identical grants are never gated.
+ */
+export function satisfiesCapabilityFor(action: string, granted: readonly Capability[], principal: Principal | null): boolean {
+  const satisfiers = CAPABILITY_SATISFIES[action];
+  if (!satisfiers) return granted.includes(action as Capability);
+  return satisfiers.some((satisfier) => granted.includes(satisfier) && satisfierPermitted(action, satisfier, principal));
+}
+
 interface ValidityVerdict {
   valid: boolean;
   reason: DecisionReason | null;
@@ -532,7 +561,7 @@ export function evaluate(request: AuthorizationRequest, world: PolicyWorld, now:
   for (const assignment of world.assignments) {
     if (assignment.principalId !== principal.id) continue;
     const verdict = isWithinValidity(assignment, t);
-    const satisfies = satisfiesCapability(request.action, assignment.capabilities);
+    const satisfies = satisfiesCapabilityFor(request.action, assignment.capabilities, principal);
     if (!verdict.valid) {
       if (satisfies) {
         if (verdict.reason === 'DENY_ASSIGNMENT_REVOKED') revokedHit = true;

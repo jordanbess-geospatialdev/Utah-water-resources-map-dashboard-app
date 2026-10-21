@@ -30,10 +30,17 @@ export interface IndicatorPeriod {
   readonly description: string;
 }
 
+/**
+ * One exclusion applied to reach an indicator denominator: a public-safe
+ * CLASS LABEL and a count only — never an identifier list. Exclusions cover
+ * restricted/internal objects (e.g. an unpublished proposed gauge), whose
+ * existence a public indicator must not confirm; omitted with counts,
+ * never identified (hidden-object rule; mirrors the DEFECT-Q1 fix in
+ * services/api/src/summaries/indicators.ts).
+ */
 export interface IndicatorExclusion {
   readonly reason: string;
   readonly count: number;
-  readonly ids: readonly string[];
 }
 
 export interface IndicatorScope {
@@ -113,6 +120,8 @@ export interface StationInput {
   readonly displayName: string;
   readonly systemId: string;
   readonly status: string;
+  /** Station visibility ('public' | 'restricted' | 'internal'): drives the anonymous-omission wall below. */
+  readonly visibility: string;
   readonly telemetry: string;
   readonly siteTypeId: string;
   readonly waterSourceTypeId: string;
@@ -317,7 +326,8 @@ export function classifyRecord(record: NormalizedRecord): SourceClassification {
 
 interface ScopedRows {
   readonly rows: readonly ObservationInput[];
-  readonly statusExclusions: readonly { reason: string; ids: readonly string[]; rowCount: number }[];
+  /** Anonymous exclusion classes: reason label + excluded-row count only (never identifiers). */
+  readonly statusExclusions: readonly { reason: string; rowCount: number }[];
   readonly supersededDuplicateIds: readonly string[];
 }
 
@@ -357,6 +367,8 @@ function scopedActiveRows(world: SummaryWorldInput, systemId: string | undefined
     i = j;
   }
 
+  // Anonymous exclusion classes: the station ids stay INTERNAL to the count
+  // derivation — the emitted class is a label + row count only (DEFECT-Q1).
   const statusExclusions = [
     { reason: 'inactive stations excluded', ids: buckets.inactive as readonly string[] },
     { reason: 'proposed stations excluded', ids: buckets.proposed as readonly string[] },
@@ -365,7 +377,7 @@ function scopedActiveRows(world: SummaryWorldInput, systemId: string | undefined
     const streamIds = new Set(
       stations.filter((station) => entry.ids.includes(station.id)).flatMap((station) => (station.datastreams ?? []).map((stream) => stream.id)),
     );
-    return { reason: entry.reason, ids: entry.ids, rowCount: inWindow.filter((row) => streamIds.has(row.streamId)).length };
+    return { reason: entry.reason, rowCount: inWindow.filter((row) => streamIds.has(row.streamId)).length };
   });
 
   return { rows, statusExclusions, supersededDuplicateIds: superseded };
@@ -375,13 +387,12 @@ function rowExclusions(scoped: ScopedRows): IndicatorExclusion[] {
   const exclusions: IndicatorExclusion[] = scoped.statusExclusions.map((entry) => ({
     reason: entry.reason,
     count: entry.rowCount,
-    ids: entry.ids,
   }));
   if (scoped.supersededDuplicateIds.length > 0) {
+    // Count only: the superseded observation ids stay internal (DEFECT-Q1).
     exclusions.push({
       reason: 'duplicate-timestamp retransmissions superseded (latest received kept; both originals stay in the raw listing)',
       count: scoped.supersededDuplicateIds.length,
-      ids: scoped.supersededDuplicateIds,
     });
   }
   return exclusions;
@@ -436,10 +447,13 @@ export function telemetryCoverageIndicator(
     asOf,
     measureKind: 'output',
     method: INDICATOR_METHOD,
+    // Anonymous class counts only: an exclusion list never identifies the
+    // excluded stations (the proposed class can include restricted objects;
+    // DEFECT-Q1 fix - labels + counts, never ids).
     exclusions: [
-      { reason: 'inactive stations excluded', count: buckets.inactive.length, ids: buckets.inactive },
-      { reason: 'proposed stations excluded', count: buckets.proposed.length, ids: buckets.proposed },
-      { reason: 'unknown-status stations excluded', count: buckets['unknown-status'].length, ids: buckets['unknown-status'] },
+      { reason: 'inactive stations excluded', count: buckets.inactive.length },
+      { reason: 'proposed stations excluded', count: buckets.proposed.length },
+      { reason: 'unknown-status stations excluded', count: buckets['unknown-status'].length },
     ],
   };
 }
@@ -674,6 +688,20 @@ export interface StreamAccountingEntry {
   readonly estimatedSeconds: number;
 }
 
+/**
+ * One anonymous omission class of the default-public projection: a
+ * public-safe class label and the count of streams omitted for that class.
+ * Restricted/internal streams are acknowledged ONLY this way — never
+ * identified by id, display name or property (hidden-object rule:
+ * omitted with counts, never identified; mirrors the DEFECT-Q2 fix in
+ * services/api/src/summaries/totals.ts). The 'all' projection itemizes
+ * every stream instead and carries no anonymous classes.
+ */
+export interface OmittedStreamClass {
+  readonly reason: string;
+  readonly count: number;
+}
+
 export interface CategoryDailyValue {
   readonly key: string;
   readonly volumeAcreFeet: number | null;
@@ -708,6 +736,13 @@ export interface AreaTotals {
   readonly noDoubleCountPolicy: string;
   readonly combinedVolumeAcreFeet: null;
   readonly categories: readonly CategoryTotal[];
+  /**
+   * Streams this projection does not enumerate, as anonymous class counts
+   * (public projection only): restricted/internal stations and streams are
+   * counted by omission class and never identified. Empty for 'all'
+   * visibility, which itemizes every stream in `streams`.
+   */
+  readonly omittedStreams: readonly OmittedStreamClass[];
   readonly streams: readonly StreamAccountingEntry[];
 }
 
@@ -843,12 +878,26 @@ export function areaTotals(world: SummaryWorldInput, request: TotalsRequestInput
   const streams: StreamAccountingEntry[] = [];
   const categoryStreams = new Map<AccountingCategory, { streamId: string; volume: number; covered: number; duration: number; estimated: number }[]>();
   const dailyByCategory = new Map<AccountingCategory, Map<string, { volume: number | null; covered: number; duration: number }>>();
+  const omittedByClass = new Map<string, number>();
   let effectiveStartMs: number | null = null;
   let effectiveEndMs: number | null = null;
 
   const streamRows = world.observations;
   for (const station of stations) {
     for (const stream of [...(station.datastreams ?? [])].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+      if (visibility === 'public' && (station.visibility !== 'public' || stream.visibility !== 'public')) {
+        // Hidden-object rule (DEFECT-Q2 fix, mirroring services totals.ts): a
+        // restricted/internal station or stream is never enumerated in the
+        // public projection - no ids, no display names, no properties, not
+        // even its status. It joins an anonymous class count (label + count
+        // only). The status-based rules below apply to public objects only.
+        const reason =
+          station.visibility !== 'public'
+            ? `station not in the public projection (${station.visibility})`
+            : `stream not in the public projection (${stream.visibility})`;
+        omittedByClass.set(reason, (omittedByClass.get(reason) ?? 0) + 1);
+        continue;
+      }
       const inclusion = inclusionOf(station, stream, visibility);
       if (!inclusion.included || inclusion.category === null) {
         streams.push({
@@ -959,6 +1008,9 @@ export function areaTotals(world: SummaryWorldInput, request: TotalsRequestInput
       noDoubleCountPolicy: NO_DOUBLE_COUNT_POLICY,
       combinedVolumeAcreFeet: null,
       categories,
+      omittedStreams: [...omittedByClass.entries()]
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => (a.reason < b.reason ? -1 : 1)),
       streams,
     },
   };

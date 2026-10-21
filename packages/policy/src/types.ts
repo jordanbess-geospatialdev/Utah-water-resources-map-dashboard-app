@@ -16,7 +16,9 @@
  */
 
 /** Semantic version of the policy vocabulary and evaluation rules. Bumped on any observable behavior change. */
-export const POLICY_VERSION = '0.1.0';
+// 0.1.1 (WD-004 / DEFECT-Q3): statewide-administration satisfies field-visits
+// only for the steward persona family (SATISFACTION_ROLE_GATES).
+export const POLICY_VERSION = '0.1.1';
 
 /** Role families from the entitlement schema (packages/contracts/schemas/entitlement.json). */
 export type RoleFamily =

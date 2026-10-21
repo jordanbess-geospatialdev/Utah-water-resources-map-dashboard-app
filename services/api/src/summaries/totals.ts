@@ -16,6 +16,11 @@
  *   reservoir-release; site type 'natural-channel' -> natural-channel-flow;
  *   site type 'flume'/'weir' -> canal-delivery. Anything without a governed
  *   category is excluded with its reason.
+ * - The default-public projection NEVER enumerates restricted/internal
+ *   stations or streams (no ids, display names or properties): they are
+ *   acknowledged only as anonymous class counts in AreaTotals.omittedStreams
+ *   - omitted with counts, never identified (hidden-object rule; DEFECT-Q2
+ *   fix). The 'all' projection itemizes every stream for entitled callers.
  * - Totals are reported PER CATEGORY and are NEVER summed across categories
  *   (combinedVolumeAcreFeet is null by contract): the same water can be
  *   measured at an upstream gauge, a downstream gauge and a canal delivery.
@@ -79,6 +84,19 @@ export interface StreamAccountingEntry {
   readonly estimatedSeconds: number;
 }
 
+/**
+ * One anonymous omission class of the default-public projection: a
+ * public-safe class label and the count of streams omitted for that class.
+ * Restricted/internal streams are acknowledged ONLY this way — never
+ * identified by id, display name or property (hidden-object rule:
+ * omitted with counts, never identified; DEFECT-Q2 fix). The 'all'
+ * projection itemizes every stream instead and carries no anonymous classes.
+ */
+export interface OmittedStreamClass {
+  readonly reason: string;
+  readonly count: number;
+}
+
 export interface CategoryDailyValue {
   readonly key: string;
   readonly volumeAcreFeet: number | null;
@@ -115,6 +133,13 @@ export interface AreaTotals {
   /** Always null by policy: cross-category sums can double-count the same water. */
   readonly combinedVolumeAcreFeet: null;
   readonly categories: readonly CategoryTotal[];
+  /**
+   * Streams this projection does not enumerate, as anonymous class counts
+   * (public projection only): restricted/internal stations and streams are
+   * counted by omission class and never identified. Empty for 'all'
+   * visibility, which itemizes every stream in `streams`.
+   */
+  readonly omittedStreams: readonly OmittedStreamClass[];
   readonly streams: readonly StreamAccountingEntry[];
 }
 
@@ -169,11 +194,25 @@ export function areaTotals(store: SeriesStore, world: SummaryWorld, request: Tot
   const streams: StreamAccountingEntry[] = [];
   const categoryStreams = new Map<AccountingCategory, { streamId: string; volume: number; covered: number; duration: number; estimated: number }[]>();
   const dailyByCategory = new Map<AccountingCategory, Map<string, { volume: number | null; covered: number; duration: number }>>();
+  const omittedByClass = new Map<string, number>();
   let effectiveStartMs: number | null = null;
   let effectiveEndMs: number | null = null;
 
   for (const station of [...stations].sort((a, b) => (a.id < b.id ? -1 : 1))) {
     for (const stream of [...station.streams].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+      if (visibility === 'public' && (station.visibility !== 'public' || stream.visibility !== 'public')) {
+        // Hidden-object rule (DEFECT-Q2 fix): a restricted/internal station or
+        // stream is never enumerated in the public projection — no ids, no
+        // display names, no properties, not even its status. It joins an
+        // anonymous class count (label + count only). The status-based rules
+        // below apply to public objects only.
+        const reason =
+          station.visibility !== 'public'
+            ? `station not in the public projection (${station.visibility})`
+            : `stream not in the public projection (${stream.visibility})`;
+        omittedByClass.set(reason, (omittedByClass.get(reason) ?? 0) + 1);
+        continue;
+      }
       const inclusion = inclusionOf(station, stream, visibility);
       if (!inclusion.included || inclusion.category === null) {
         streams.push({
@@ -294,6 +333,9 @@ export function areaTotals(store: SeriesStore, world: SummaryWorld, request: Tot
       noDoubleCountPolicy: NO_DOUBLE_COUNT_POLICY,
       combinedVolumeAcreFeet: null,
       categories,
+      omittedStreams: [...omittedByClass.entries()]
+        .map(([reason, count]) => ({ reason, count }))
+        .sort((a, b) => (a.reason < b.reason ? -1 : 1)),
       streams,
     },
   };

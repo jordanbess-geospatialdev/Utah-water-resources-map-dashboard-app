@@ -373,7 +373,8 @@
         "WD-025"
       ],
       "release": "MVP",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "d1a6a5c29bba08e35130e6ad7b67de382c97dbc9"
     },
     {
       "id": "WD-022",

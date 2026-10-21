@@ -31,6 +31,11 @@
  * measured - classification is by source, exclusion is by range), estimated
  * 1 (obs-q-042), unknown 1 (obs-q-010 null frame) -> 66/68 = 33/34, 1/68,
  * 1/68. The unknown bucket is distinct, never folded into measured/estimated.
+ *
+ * DEFECT-Q1 fix: exclusion lists carry class labels + counts ONLY (never
+ * station/observation identifiers), so no public indicator confirms the
+ * existence of the restricted proposed gauge or any other hidden object.
+ * The headline fractions (2/4, 1/68, 66/68) are unchanged by the fix.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -109,12 +114,13 @@ test('telemetry coverage golden: 2 of 4 active stations, inactive+proposed exclu
   assert.equal(indicator.period.start, '2026-03-08T07:00:00.000Z');
   assert.equal(indicator.period.end, '2026-03-09T07:00:00.000Z');
   assert.ok(indicator.period.description.includes('24 h'), 'the freshness window length is stated');
+  // DEFECT-Q1 fix: anonymous class counts only — no station identifiers.
   assert.deepEqual(
-    indicator.exclusions.map((exclusion) => [exclusion.reason, exclusion.count, exclusion.ids]),
+    indicator.exclusions.map((exclusion) => [exclusion.reason, exclusion.count]),
     [
-      ['inactive stations excluded', 1, ['sta-summit-creek-inactive']],
-      ['proposed stations excluded', 1, ['sta-ogden-valley-proposed']],
-      ['unknown-status stations excluded', 0, []],
+      ['inactive stations excluded', 1],
+      ['proposed stations excluded', 1],
+      ['unknown-status stations excluded', 0],
     ],
   );
 });
@@ -165,7 +171,6 @@ test('reviewed-data coverage golden: 1 of 68 readings reached the reviewed level
   const duplicate = indicator.exclusions.find((exclusion) => exclusion.reason.includes('duplicate-timestamp'));
   assert.ok(duplicate);
   assert.equal(duplicate.count, 1);
-  assert.deepEqual(duplicate.ids, ['obs-q-016']);
 });
 
 test('measured-vs-estimated golden: 66/68 measured, 1/68 estimated, 1/68 unknown (FR-059)', () => {
@@ -289,4 +294,49 @@ test('determinism: deriving the full overview twice yields identical results', (
   const first = JSON.stringify(statewideOverview(world));
   const second = JSON.stringify(statewideOverview(world));
   assert.equal(first, second);
+});
+
+// ---------------------------------------------------------------------------
+// DEFECT-Q1 fix: no restricted/internal identifier in any public indicator
+// ---------------------------------------------------------------------------
+
+/** Restricted/internal fixture objects: their existence must not be confirmed by a public indicator (hidden-object rule). */
+const RESTRICTED_IDENTIFIERS = [
+  'sta-hyrum-diversion-owner',
+  'str-hyrum-q-owner',
+  'sta-bear-lake-diagnostic',
+  'str-diag-voltage',
+  'sta-ogden-valley-proposed',
+  'str-ogden-q-proposed',
+  'Garden City Diagnostic Site',
+  'Ogden Valley Upper Proposed Gauge',
+];
+
+test('DEFECT-Q1 fix: serialized public indicators name no restricted object and carry no identifier lists', () => {
+  const surfaces = [
+    summaryIndicators(world),
+    summaryIndicators(world, { systemId: 'sys-bear-river' }),
+    summaryIndicators(world, { systemId: 'sys-weber-river' }),
+    statewideOverview(world),
+  ];
+  for (const [index, surface] of surfaces.entries()) {
+    const serialized = JSON.stringify(surface);
+    for (const identifier of RESTRICTED_IDENTIFIERS) {
+      assert.ok(!serialized.includes(identifier), `indicator surface ${index} names restricted object ${identifier}`);
+    }
+    assert.ok(!serialized.includes('"ids"'), `indicator surface ${index} still carries identifier lists in exclusions`);
+  }
+});
+
+test('DEFECT-Q1 fix leaves the headline fractions unchanged: telemetry 2/4, reviewed 1/68, measured 66/68', () => {
+  const set = summaryIndicators(world);
+  assert.equal(set.telemetry.numerator, 2);
+  assert.equal(set.telemetry.denominator, 4);
+  assert.ok(closeRelative(set.telemetry.fraction!, 2 / 4), 'telemetry fraction is exactly 2/4');
+  assert.equal(set.reviewed.numerator, 1);
+  assert.equal(set.reviewed.denominator, 68);
+  assert.ok(closeRelative(set.reviewed.fraction!, 1 / 68), 'reviewed fraction is exactly 1/68');
+  assert.equal(set.measuredVersusEstimated.buckets[0]!.numerator, 66);
+  assert.equal(set.measuredVersusEstimated.denominator, 68);
+  assert.ok(closeRelative(set.measuredVersusEstimated.buckets[0]!.fraction!, 66 / 68), 'measured fraction is exactly 66/68');
 });

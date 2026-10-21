@@ -87,11 +87,12 @@ test('golden: telemetry coverage 2 of 4 active stations with inactive/proposed e
   assert.equal(indicator.fraction, 0.5);
   assert.equal(indicator.asOf, '2026-03-09T07:00:00Z', 'asOf is the fixture fixed clock, never the wall clock');
   assert.equal(indicator.period.start, '2026-03-08T07:00:00.000Z');
+  // DEFECT-Q1 fix: anonymous class counts only — no station identifiers.
   assert.deepEqual(
-    indicator.exclusions.filter((exclusion) => exclusion.count > 0).map((exclusion) => [exclusion.reason, exclusion.ids]),
+    indicator.exclusions.filter((exclusion) => exclusion.count > 0).map((exclusion) => [exclusion.reason, exclusion.count]),
     [
-      ['inactive stations excluded', ['sta-summit-creek-inactive']],
-      ['proposed stations excluded', ['sta-ogden-valley-proposed']],
+      ['inactive stations excluded', 1],
+      ['proposed stations excluded', 1],
     ],
   );
 });
@@ -253,6 +254,69 @@ test('determinism: deriving the overview and totals twice yields identical resul
     totals: d.areaTotals(world, { area: 'statewide', start: GOLDEN_WINDOW.start, end: GOLDEN_WINDOW.end, basis: 'best-available', visibility: 'all' }),
   });
   assert.equal(first, second);
+});
+
+// ---------------------------------------------------------------------------
+// DEFECT-Q1/Q2 fix: no restricted/internal identifier reaches the rendered
+// public model (view model + totals), and the headline fractions are unchanged
+// ---------------------------------------------------------------------------
+
+/**
+ * Restricted/internal fixture objects. The owner Hyrum station's display name
+ * is deliberately NOT here: the fixture shares it with the adjacent PUBLIC
+ * station (the no-double-count trap), so the name itself is a public object.
+ */
+const RESTRICTED_IDENTIFIERS = [
+  'sta-hyrum-diversion-owner',
+  'str-hyrum-q-owner',
+  'sta-bear-lake-diagnostic',
+  'str-diag-voltage',
+  'sta-ogden-valley-proposed',
+  'str-ogden-q-proposed',
+  'Garden City Diagnostic Site',
+  'Ogden Valley Upper Proposed Gauge',
+];
+
+test('DEFECT-Q1/Q2 fix: no restricted identifier reaches the rendered public model', () => {
+  const surfaces: readonly (readonly [string, unknown])[] = [
+    ['overview', d.statewideOverview(world)],
+    ['totals-default-public', d.areaTotals(world, { area: 'statewide', start: GOLDEN_WINDOW.start, end: GOLDEN_WINDOW.end, basis: 'best-available' })],
+    ['totals-explicit-public', d.areaTotals(world, { area: 'statewide', start: GOLDEN_WINDOW.start, end: GOLDEN_WINDOW.end, basis: 'raw', visibility: 'public' })],
+    ['totals-weber', d.areaTotals(world, { area: { systemId: 'sys-weber-river' }, start: GOLDEN_WINDOW.start, end: GOLDEN_WINDOW.end, basis: 'raw' })],
+  ];
+  for (const [label, model] of surfaces) {
+    const serialized = JSON.stringify(model);
+    for (const identifier of RESTRICTED_IDENTIFIERS) {
+      assert.ok(!serialized.includes(identifier), `${label} names restricted object ${identifier}`);
+    }
+  }
+  // The indicator exclusions carry no identifier lists at all (structural).
+  assert.ok(!JSON.stringify(d.statewideOverview(world)).includes('"ids"'));
+  // The restricted streams appear only as anonymous class counts (never identified).
+  const publicTotals = d.areaTotals(world, { area: 'statewide', start: GOLDEN_WINDOW.start, end: GOLDEN_WINDOW.end, basis: 'raw' });
+  if (publicTotals.outcome !== 'allowed') throw new Error('unreachable');
+  assert.equal(publicTotals.value.streams.length, 4, 'only the 4 public streams are itemized');
+  assert.deepEqual(publicTotals.value.omittedStreams, [
+    { reason: 'station not in the public projection (internal)', count: 1 },
+    { reason: 'station not in the public projection (restricted)', count: 2 },
+  ]);
+});
+
+test('DEFECT-Q1/Q2 fix leaves the headline rendered fractions unchanged: 2/4, 1/68, 66/68', () => {
+  const set = d.summaryIndicators(world);
+  assert.equal(set.telemetry.numerator, 2);
+  assert.equal(set.telemetry.denominator, 4);
+  close(set.telemetry.fraction!, 2 / 4, 'telemetry fraction is exactly 2/4');
+  assert.equal(set.reviewed.numerator, 1);
+  assert.equal(set.reviewed.denominator, 68);
+  close(set.reviewed.fraction!, 1 / 68, 'reviewed fraction is exactly 1/68');
+  assert.equal(set.measuredVersusEstimated.buckets[0]!.numerator, 66);
+  assert.equal(set.measuredVersusEstimated.denominator, 68);
+  close(set.measuredVersusEstimated.buckets[0]!.fraction!, 66 / 68, 'measured fraction is exactly 66/68');
+  // The plain-language lead still states the same headline numbers.
+  const text = d.plainLanguageSummary(set);
+  assert.ok(text.includes('2 of 4 active measurement stations'));
+  assert.ok(text.includes('1 of 68 reported readings'));
 });
 
 test('window validation mirrors the WD-008 bounds for the overview error state', () => {

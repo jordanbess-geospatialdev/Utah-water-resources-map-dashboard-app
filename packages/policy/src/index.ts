@@ -45,6 +45,7 @@ export {
   evaluatePublicRead,
   isCurrentlyPublished,
   satisfiesCapability,
+  satisfiesCapabilityFor,
 } from './engine.ts';
 
 export {
@@ -57,6 +58,7 @@ export {
   DOCUMENTED_BOUNDARIES,
   PUBLIC_ACTIONS,
   CAPABILITY_SATISFIES,
+  SATISFACTION_ROLE_GATES,
   RESTRICTED_FIELD_READ_CAPABILITIES,
   INTERNAL_FIELD_READ_CAPABILITIES,
   ACTION_LIFECYCLE_CLASS,
