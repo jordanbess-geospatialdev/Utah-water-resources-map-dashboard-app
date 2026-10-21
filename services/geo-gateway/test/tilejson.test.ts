@@ -15,8 +15,11 @@ import { gunzipSync } from 'node:zlib';
 
 import {
   TileJsonError,
+  ACCEPTED_MVT_LAYER_VERSIONS,
+  assertAcceptedMvtLayerVersion,
   assertSourceLayer,
   extractSourceLayer,
+  isAcceptedMvtLayerVersion,
   parseTileJson,
   resolveTileJson,
   resolveTileTemplate,
@@ -151,9 +154,12 @@ describe('MVT header decode control check (SYNTHETIC tile bytes)', () => {
    * Layer.version (field 15, varint), Layer.name (field 1, wire type 2).
    * Proves the tile bytes carry the SAME source-layer id the TileJSON
    * advertises - the evidence chain the capture harness re-runs against a
-   * live server.
+   * live server - and that the decoded layer version satisfies the T-05 D5
+   * policy in src/tilejson.ts (v1 = pinned NeoServer 0.3.0 baseline, v2 =
+   * forward-compatible; the pre-T-05 suite wrongly demanded v2 and would
+   * have rejected every real NeoServer tile).
    */
-  function firstMvtLayerName(raw: Uint8Array): string {
+  function firstMvtLayer(raw: Uint8Array): { name: string; version: number } {
     const b = raw[0];
     assert.equal(b, 0x1a, 'first field must be Tile.layers (field 3, wire type 2)');
     const len = raw[1];
@@ -177,9 +183,13 @@ describe('MVT header decode control check (SYNTHETIC tile bytes)', () => {
         throw new Error(`unexpected layer field ${field}/${wireType}`);
       }
     }
-    assert.equal(version, 2, 'MVT layer version must be 2');
-    return name;
+    assertAcceptedMvtLayerVersion(version); // policy gate, not a hard-coded 2
+    return { name, version };
   }
+
+  /** Same synthetic layer as the fixture, re-encoded at an arbitrary version varint. */
+  const syntheticLayerTileHex = (version: number): string =>
+    `1a1378${version.toString(16).padStart(2, '0')}0a0f73746174696f6e735f7075626c6963`;
 
   test('decoded synthetic MVT layer name equals the TileJSON source-layer', () => {
     const fixture = readFixtureJson<{ gzipBase64: string; sourceLayer: string; tileHex: string }>('mvt-stations-public.json');
@@ -187,8 +197,45 @@ describe('MVT header decode control check (SYNTHETIC tile bytes)', () => {
     assert.equal(Buffer.from(tile).toString('hex'), fixture.tileHex, 'fixture integrity');
     const doc = parseTileJson(readFixture('tilejson-water-public-stations.json'));
     const advertised = extractSourceLayer(doc);
-    assert.equal(firstMvtLayerName(tile), advertised, 'tile bytes and TileJSON must agree on the source-layer');
+    const decoded = firstMvtLayer(tile);
+    assert.equal(decoded.name, advertised, 'tile bytes and TileJSON must agree on the source-layer');
     assert.notEqual(advertised, 'stations', 'and it must not be the guessed collection id');
+    // v2 synthetic sample: accepted per policy (forward-compatible case).
+    assert.equal(decoded.version, 2);
+    assert.ok(isAcceptedMvtLayerVersion(decoded.version));
+  });
+
+  test('T-05 D5 policy: layer version 1 - what the pinned NeoServer 0.3.0 emits - is ACCEPTED', () => {
+    // Byte-for-byte the recorded live control-tile shape (layer version 1,
+    // CAPTURE-REPORT.md section 5), re-named to the synthetic source-layer so
+    // the tile/TileJSON agreement chain still proves itself.
+    const tile = Buffer.from(syntheticLayerTileHex(1), 'hex');
+    const decoded = firstMvtLayer(tile); // must NOT throw
+    assert.equal(decoded.version, 1, 'the pinned upstream baseline');
+    assert.equal(decoded.name, 'stations_public');
+    assert.ok(isAcceptedMvtLayerVersion(1));
+    assert.doesNotThrow(() => assertAcceptedMvtLayerVersion(1));
+  });
+
+  test('T-05 D5 policy: an unexpected layer version fails LOUDLY (no silent absorption)', () => {
+    assert.ok(!isAcceptedMvtLayerVersion(0));
+    assert.ok(!isAcceptedMvtLayerVersion(3));
+    for (const v of [0, 3]) {
+      assert.throws(
+        () => assertAcceptedMvtLayerVersion(v),
+        (err: unknown) => err instanceof TileJsonError && err.code === 'MVT_LAYER_VERSION_NOT_ACCEPTED',
+        `version ${v} must be refused by policy`,
+      );
+    }
+    // and the decode control check enforces the same policy on real bytes
+    assert.throws(
+      () => firstMvtLayer(Buffer.from(syntheticLayerTileHex(3), 'hex')),
+      (err: unknown) => err instanceof TileJsonError && err.code === 'MVT_LAYER_VERSION_NOT_ACCEPTED',
+    );
+  });
+
+  test('the accepted-version policy is exactly {1, 2}', () => {
+    assert.deepEqual([...ACCEPTED_MVT_LAYER_VERSIONS].sort(), [1, 2]);
   });
 
   test('gzip-wrapped tile bytes are detected by magic (1f 8b) - the capture header check', () => {

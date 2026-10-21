@@ -37,7 +37,8 @@ export type TileJsonErrorCode =
   | 'TILE_TEMPLATE_BAD_SHAPE'
   | 'TILE_TEMPLATE_QUERY_UNEXPECTED'
   | 'SOURCE_LAYER_ABSENT'
-  | 'SOURCE_LAYER_MISMATCH';
+  | 'SOURCE_LAYER_MISMATCH'
+  | 'MVT_LAYER_VERSION_NOT_ACCEPTED';
 
 export class TileJsonError extends Error {
   readonly code: TileJsonErrorCode;
@@ -144,6 +145,48 @@ export function assertSourceLayer(tileJson: TileJsonDocument, assumed: string): 
     throw new TileJsonError(
       'SOURCE_LAYER_MISMATCH',
       `assumed source-layer "${assumed}" does not match the advertised "${actual}"; use extractSourceLayer() / the gateway TileJSON response`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// MVT layer version policy (T-05 finding D5)
+// ---------------------------------------------------------------------------
+
+/**
+ * DECISION (T-05 finding D5, infra/neoserver/qualification/recorded/
+ * CAPTURE-REPORT.md section 4; policy doc: infra/neoserver/qualification/
+ * KNOWN-SERVER-BEHAVIOR.md): the MVT layer versions this gateway accepts.
+ *
+ * - Version 1 is the SUPPORTED BASELINE. The pinned NeoServer 0.3.0 image
+ *   (tobilg/neoserver@sha256:dab746cc…) emits MVT layer version 1 - verified
+ *   live during the T-05 qualification by an independent protobuf decode of
+ *   the captured control tile; no [Tiles] configuration knob changes it.
+ *   Rejecting v1 would reject every real tile this gateway's pinned upstream
+ *   produces.
+ * - Version 2 is accepted as FORWARD-COMPATIBLE (MVT 2.x; the synthetic
+ *   samples in this suite are v2), so a future upstream that starts emitting
+ *   v2 needs no gateway change.
+ * - Anything else (0, 3, ...) is refused loudly: an unexpected version means
+ *   the upstream changed shape and a human must re-qualify against a new
+ *   pinned digest, not have consumers silently absorb it.
+ *
+ * MapLibre renders both v1 and v2, so accepting v1 does not weaken the
+ * browser side of the transport.
+ */
+export const ACCEPTED_MVT_LAYER_VERSIONS: ReadonlySet<number> = Object.freeze(new Set([1, 2]));
+
+/** Policy predicate over a decoded MVT layer version (see ACCEPTED_MVT_LAYER_VERSIONS). */
+export function isAcceptedMvtLayerVersion(version: number): boolean {
+  return ACCEPTED_MVT_LAYER_VERSIONS.has(version);
+}
+
+/** Loud policy gate for a decoded MVT layer version (T-05 D5); throws when not accepted. */
+export function assertAcceptedMvtLayerVersion(version: number): void {
+  if (!isAcceptedMvtLayerVersion(version)) {
+    throw new TileJsonError(
+      'MVT_LAYER_VERSION_NOT_ACCEPTED',
+      `MVT layer version ${version} is outside the accepted policy {1, 2} (v1 = pinned NeoServer 0.3.0 baseline, v2 = forward-compatible); re-qualify the upstream digest before widening`,
     );
   }
 }

@@ -48,6 +48,9 @@ export {
   assertSourceLayer,
   resolveTileTemplate,
   resolveTileJson,
+  ACCEPTED_MVT_LAYER_VERSIONS,
+  isAcceptedMvtLayerVersion,
+  assertAcceptedMvtLayerVersion,
 } from './tilejson.ts';
 export type { TileJsonDocument, TileJsonErrorCode, ParsedTileTemplate, TileTemplateAllowlist, ResolveTileJsonInput, ResolvedTileJson } from './tilejson.ts';
 

@@ -12,14 +12,30 @@ TypeScript, **zero runtime dependencies** (Node built-ins only), tested with
   gate via `@utah-water/policy` `evaluatePublicRead`/`evaluate`, credential
   isolation, response caps, cache policy), and the synthetic-sample test
   suite under `test/` (all samples clearly labeled SYNTHETIC).
-- **Pending execution:** every claim about REAL NeoServer behavior. This
-  environment has no Docker daemon; the pinned image digests in
-  `infra/neoserver/docker-compose.yml` were read from Docker Hub metadata on
-  2026-10-21 and must be re-verified at first `docker compose pull`. The
-  qualification harness (`infra/neoserver/qualification/capture.mjs` +
-  `recorded/EXPECTATIONS.md`) is ready to run; nothing there has executed.
-  No captured-from-server data exists anywhere in this package — by design,
-  fabrication was not an option.
+- **Live-qualified (T-05, 2026-10-21):** the pinned disposable stack in
+  `infra/neoserver/` was executed against
+  `tobilg/neoserver:0.3.0@sha256:dab746cc…` — 14/14 captures at expected
+  statuses; evidence in `infra/neoserver/qualification/recorded/`
+  (immutable). One genuine server behavior forced a policy decision: MVT
+  layer version 1 (see below). Upstream behaviors the gateway must live
+  with are recorded in `infra/neoserver/qualification/KNOWN-SERVER-BEHAVIOR.md`.
+
+## MVT layer version policy (T-05 finding D5) — ACCEPT v1, ACCEPT v2, refuse the rest
+
+The pinned NeoServer 0.3.0 digest was observed emitting BOTH MVT layer
+versions: the recorded T-05 capture decoded `version=1` (independently
+verified; no `[Tiles]` knob changes it), while the D7 re-verification on a
+fresh stack decoded `version=2` on every route tried. The gateway therefore
+treats **version 1 as the supported baseline for the pinned digest and
+version 2 as forward-compatible**, and fails loudly on anything else
+(version 0, 3, …) so a changed upstream triggers re-qualification instead
+of silent absorption. Implemented in `src/tilejson.ts`
+(`ACCEPTED_MVT_LAYER_VERSIONS`, `isAcceptedMvtLayerVersion`,
+`assertAcceptedMvtLayerVersion` — exported from the package barrel);
+enforced by the MVT header decode control check in `test/tilejson.test.ts`.
+MapLibre renders both v1 and v2, so accepting v1 does not weaken the
+browser side of the transport. The pre-T-05 suite wrongly demanded v2 and
+would have rejected every real tile of the recorded capture.
 
 ## Layout
 
@@ -27,7 +43,7 @@ TypeScript, **zero runtime dependencies** (Node built-ins only), tested with
 | --- | --- |
 | `src/allowlist.ts` | Route table (workspace/service/collection/operation), admin-path and WFS-mutation denial, WXS KVP operation resolution. Table is data — deployments pass their own frozen table. |
 | `src/url.ts` | Pure upstream URL building: matrix z/y/x tiles, EPSG:3857 WMS bboxes (degree-shaped bboxes rejected loudly), explicit WFS GeoJSON output, limit clamping, `assertTrustedUpstream`. |
-| `src/tilejson.ts` | Trusted TileJSON resolution: relative links resolved against the trusted service base (never the browser), only allowlisted templates re-mapped same-origin, actual `vector_layers[0].id` extraction with loud mismatch failures. |
+| `src/tilejson.ts` | Trusted TileJSON resolution: relative links resolved against the trusted service base (never the browser), only allowlisted templates re-mapped same-origin, actual `vector_layers[0].id` extraction with loud mismatch failures. Also carries the MVT layer version policy (T-05 D5): accept v1 (pinned-digest baseline) and v2 (forward-compatible), refuse anything else loudly. |
 | `src/gateway.ts` | Transport-agnostic pipeline: method gate → allowlist → policy → URL build → fetch (timeout, narrow service credential from a secret-reference resolver) → content-type/size caps → TileJSON rewrite → cache policy. |
 | `src/index.ts` | Public barrel. |
 | `test/` | `node --test` suites + `test/fixtures/` SYNTHETIC samples. |
@@ -110,12 +126,16 @@ SYNTHETIC; control coordinates are the frozen contract-fixture stations
 (10/**381**/192) plus its inverse projection are recomputed independently in
 the tests so the module under test cannot validate itself.
 
-## Qualification (live capture) — pending
+## Qualification (live capture) — executed 2026-10-21
 
 See `infra/neoserver/docker-compose.yml` (pinned disposable stack),
 `infra/neoserver/qualification/capture.mjs` (zero-dep recorder with machine
 checks: z/y/x control tile, MVT header/source-layer agreement, GeoJSON axis
 control, private-content canary, negative controls) and
-`infra/neoserver/qualification/recorded/EXPECTATIONS.md` (the full human
-checklist, including the WMS EPSG:4326 lat/lon axis probe, cache refresh and
-single-active-writer drills).
+`infra/neoserver/qualification/recorded/` (immutable evidence: manifest,
+artifacts, `CAPTURE-REPORT.md`, `EXPECTATIONS.md` — including the WMS
+EPSG:4326 lat/lon axis probe, cache refresh and single-active-writer
+drills). Upstream behaviors the gateway must live with (MVT layer version
+v1, `PUT layer` drops `sql_view`, `test-connection` body requirement, MSYS
+path mangling) are documented for operators in
+`infra/neoserver/qualification/KNOWN-SERVER-BEHAVIOR.md`.
