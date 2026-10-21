@@ -1,0 +1,9 @@
+{
+  "id": "tok-000042",
+  "label": "Corinne research extract",
+  "scopes": ["observations:read", "exports:create"],
+  "secret": "uwdat_PLACEHOLDER_SHOWN_EXACTLY_ONCE",
+  "issuedAt": "2026-03-09T07:12:00Z",
+  "expiresAt": "2026-06-07T07:00:00Z",
+  "requestId": "req-2c0b8f11-6b7f-4a45"
+}

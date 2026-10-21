@@ -1,0 +1,78 @@
+[
+  {
+    "status": 401,
+    "scenario": "Missing, malformed, unknown, revoked or expired credential (also: the account was deactivated or the underlying grant revoked so the token no longer resolves to authority).",
+    "body": {
+      "type": "https://waterdata.example.utah.gov/problems/unauthenticated",
+      "title": "Unauthenticated",
+      "status": 401,
+      "code": "UNAUTHENTICATED",
+      "message": "credential is missing, unknown, revoked or expired; rotate or re-issue the token",
+      "requestId": "req-0b31b7f6-7d1e-4d01"
+    }
+  },
+  {
+    "status": 403,
+    "scenario": "Action or data outside the token's scopes, or outside the account's CURRENT authority; includes query windows beyond the token's dateRange (rejected, never clamped).",
+    "body": {
+      "type": "https://waterdata.example.utah.gov/problems/forbidden",
+      "title": "Forbidden",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "message": "processing level \"raw\" is outside this token's declared levels",
+      "requestId": "req-4a9d5c2f-4a72-460a"
+    }
+  },
+  {
+    "status": 404,
+    "scenario": "Unknown identifier - and deliberately, a restricted/internal object that is out of scope for this caller (existence is not disclosed).",
+    "body": {
+      "type": "https://waterdata.example.utah.gov/problems/not-found",
+      "title": "Not found",
+      "status": 404,
+      "code": "NOT_FOUND",
+      "message": "stream not found",
+      "requestId": "req-77b1e0d3-b1d7-4f48"
+    }
+  },
+  {
+    "status": 409,
+    "scenario": "Revoking or rotating an already-revoked token (including the superseded half of a rotation); Idempotency-Key reuse with a different body.",
+    "body": {
+      "type": "https://waterdata.example.utah.gov/problems/conflict",
+      "title": "Conflict",
+      "status": 409,
+      "code": "CONFLICT",
+      "message": "token tok-000042 is already revoked",
+      "requestId": "req-1c8ac6e6-455e-4a8c"
+    }
+  },
+  {
+    "status": 422,
+    "scenario": "Malformed create request: label length, unknown scope enum, inverted date range, expiry in the past or beyond the maximum lifetime.",
+    "body": {
+      "type": "https://waterdata.example.utah.gov/problems/validation-failed",
+      "title": "Validation failed",
+      "status": 422,
+      "code": "VALIDATION_FAILED",
+      "message": "expiresAt exceeds the maximum lifetime of 90 days",
+      "requestId": "req-a5d29907-6ea1-4e9c",
+      "details": {
+        "expiresAt": ["must be at most 90 days after issue"]
+      }
+    }
+  },
+  {
+    "status": 429,
+    "scenario": "Per-token rate budget exceeded (proposed: 120 requests / 60 seconds, independent of interactive sessions).",
+    "body": {
+      "type": "https://waterdata.example.utah.gov/problems/rate-limited",
+      "title": "Rate limited",
+      "status": 429,
+      "code": "RATE_LIMITED",
+      "message": "token tok-000042 exceeded 120 requests in 60000 ms",
+      "requestId": "req-e14dd826-c318-4172",
+      "retryAfterSeconds": 42
+    }
+  }
+]

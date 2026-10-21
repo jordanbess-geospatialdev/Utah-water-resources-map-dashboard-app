@@ -1,0 +1,122 @@
+{
+  "requestId": "req-8f14e45f-ea0f-4a1d",
+  "dataRevision": "obs-rev-2026-03-09T06:20:00Z",
+  "freshness": "2026-03-08T20:00:52Z",
+  "effectiveFilters": {
+    "observedPropertyIds": ["discharge"],
+    "processingLevels": ["best-available"]
+  },
+  "pagination": {
+    "nextCursor": null,
+    "hasMore": false,
+    "limit": 100
+  },
+  "streamId": "str-corinne-q",
+  "unitId": "cfs",
+  "observedPropertyId": "discharge",
+  "timeZone": "America/Denver",
+  "observations": [
+    {
+      "id": "obs-q-039",
+      "logicalKey": "str-corinne-q:2026-03-08T09:00:00Z",
+      "streamId": "str-corinne-q",
+      "observedAt": "2026-03-08T09:00:00Z",
+      "sourceOffset": "-07:00",
+      "value": 21.8,
+      "unitId": "cfs",
+      "valueType": "observed",
+      "processingLevel": "raw",
+      "sourceEventId": "ev-corinne-q-20260308T0900Z",
+      "receivedAt": "2026-03-08T09:00:51Z",
+      "sourceId": "src-corinne-logger-01",
+      "note": "No revision has reached a non-raw level for this instant; the raw value is the best available."
+    },
+    {
+      "id": "obs-q-040",
+      "logicalKey": "str-corinne-q:2026-03-08T10:00:00Z",
+      "streamId": "str-corinne-q",
+      "observedAt": "2026-03-08T10:00:00Z",
+      "sourceOffset": "-07:00",
+      "value": 22.0,
+      "unitId": "cfs",
+      "valueType": "observed",
+      "processingLevel": "raw",
+      "sourceEventId": "ev-corinne-q-20260308T1000Z",
+      "receivedAt": "2026-03-08T10:00:50Z",
+      "sourceId": "src-corinne-logger-01",
+      "note": "No revision has reached a non-raw level for this instant; the raw value is the best available."
+    },
+    {
+      "id": "obs-q-041",
+      "logicalKey": "str-corinne-q:2026-03-08T11:00:00Z",
+      "streamId": "str-corinne-q",
+      "observedAt": "2026-03-08T11:00:00Z",
+      "sourceOffset": "-07:00",
+      "value": 22.1,
+      "unitId": "cfs",
+      "valueType": "observed",
+      "processingLevel": "raw",
+      "sourceEventId": "ev-corinne-q-20260308T1100Z",
+      "receivedAt": "2026-03-08T11:00:48Z",
+      "sourceId": "src-corinne-logger-01",
+      "note": "Last reading before the declared source outage (12:00-18:00Z)."
+    },
+    {
+      "id": "obs-q-042",
+      "logicalKey": "str-corinne-q:2026-03-08T18:00:00Z",
+      "streamId": "str-corinne-q",
+      "observedAt": "2026-03-08T18:00:00Z",
+      "sourceOffset": "-07:00",
+      "value": 23.9,
+      "unitId": "cfs",
+      "valueType": "estimated",
+      "processingLevel": "best-available",
+      "sourceEventId": "ev-corinne-q-20260308T1800Z",
+      "receivedAt": "2026-03-08T18:00:53Z",
+      "sourceId": "src-corinne-logger-01",
+      "note": "Effective value from revision rev-corinne-2002 (qualifier: interpolate; gap-edge estimate reconciled against the upstream gauge). The raw value 23.5 and the full chain remain in /observations/{key}/history."
+    },
+    {
+      "id": "obs-q-043",
+      "logicalKey": "str-corinne-q:2026-03-08T19:00:00Z",
+      "streamId": "str-corinne-q",
+      "observedAt": "2026-03-08T19:00:00Z",
+      "sourceOffset": "-07:00",
+      "value": 23.8,
+      "unitId": "cfs",
+      "valueType": "observed",
+      "processingLevel": "raw",
+      "sourceEventId": "ev-corinne-q-20260308T1900Z",
+      "receivedAt": "2026-03-08T19:00:49Z",
+      "sourceId": "src-corinne-logger-01"
+    },
+    {
+      "id": "obs-q-044",
+      "logicalKey": "str-corinne-q:2026-03-08T20:00:00Z",
+      "streamId": "str-corinne-q",
+      "observedAt": "2026-03-08T20:00:00Z",
+      "sourceOffset": "-07:00",
+      "value": 9500,
+      "unitId": "cfs",
+      "valueType": "observed",
+      "processingLevel": "raw",
+      "sourceEventId": "ev-corinne-q-20260308T2000Z",
+      "receivedAt": "2026-03-08T20:00:52Z",
+      "sourceId": "src-corinne-logger-01",
+      "note": "Out-of-range value (above the 1200 cfs plausibility bound), included with this explicit label because includeOutOfRange=true; it is not hidden and not corrected here."
+    }
+  ],
+  "coverage": {
+    "expectedCount": 12,
+    "presentCount": 6,
+    "estimatedProportion": 0.17,
+    "gapPolicy": "reported",
+    "gaps": [
+      {
+        "start": "2026-03-08T12:00:00Z",
+        "end": "2026-03-08T18:00:00Z",
+        "reason": "source-outage: six consecutive hourly readings absent during a logger communications outage on the DST transition day. The missing readings are NOT zero and are NOT interpolated."
+      }
+    ]
+  }
+}

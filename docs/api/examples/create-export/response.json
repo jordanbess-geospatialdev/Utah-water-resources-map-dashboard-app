@@ -1,0 +1,23 @@
+{
+  "id": "job-exp-000137",
+  "jobType": "export",
+  "status": "queued",
+  "progressPercent": 0,
+  "requestedBy": "principal-sarah-researcher",
+  "filters": {
+    "distributionSystemIds": ["sys-bear-river"],
+    "observedPropertyIds": ["discharge"],
+    "dataDateRange": {
+      "mode": "any-data",
+      "start": "2026-03-06T00:00:00Z",
+      "end": "2026-03-09T00:00:00Z"
+    },
+    "processingLevels": ["reviewed", "best-available"]
+  },
+  "dataRevision": "seed-utah-water-fixture-v1@2026-03-09T06:20:00Z",
+  "createdAt": "2026-03-09T07:12:00Z",
+  "updatedAt": "2026-03-09T07:12:00Z",
+  "expiresAt": "2026-03-09T07:27:00Z",
+  "downloadUrl": null,
+  "rowLimit": 20000
+}

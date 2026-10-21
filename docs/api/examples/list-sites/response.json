@@ -1,0 +1,89 @@
+{
+  "requestId": "req-5d2a9f38-1f0e-4c61",
+  "dataRevision": "seed-utah-water-fixture-v1@2026-03-09T06:20:00Z",
+  "effectiveFilters": {
+    "observedPropertyIds": ["discharge"],
+    "stateCodes": ["UT"]
+  },
+  "pagination": {
+    "nextCursor": "YWZ0ZXI6c3RhLWh5cnVtLWRpdmVyc2lvbi1wdWJsaWM=",
+    "hasMore": true,
+    "limit": 2
+  },
+  "sites": [
+    {
+      "id": "sta-bear-corinne",
+      "displayName": "Bear River near Corinne",
+      "externalId": "DWRI-01-0214",
+      "systemId": "sys-bear-river",
+      "providerId": "prov-dwri-telemetry",
+      "siteTypeId": "natural-channel",
+      "status": "active",
+      "visibility": "public",
+      "telemetry": "telemetered",
+      "waterSourceTypeId": "surface-natural-flow",
+      "stateCode": "UT",
+      "latitude": 41.6337,
+      "longitude": -112.1965,
+      "elevationFt": 4218,
+      "version": 12,
+      "datastreams": [
+        {
+          "id": "str-corinne-q",
+          "stationId": "sta-bear-corinne",
+          "observedPropertyId": "discharge",
+          "unitId": "cfs",
+          "methodTypeId": "method-rating",
+          "cadenceMinutes": 60,
+          "validRangeMin": 0,
+          "validRangeMax": 1200,
+          "visibility": "public",
+          "timeZone": "America/Denver"
+        },
+        {
+          "id": "str-corinne-stage",
+          "stationId": "sta-bear-corinne",
+          "observedPropertyId": "stage",
+          "unitId": "ft",
+          "methodTypeId": "method-staff-gauge",
+          "cadenceMinutes": 60,
+          "validRangeMin": 0,
+          "validRangeMax": 15,
+          "visibility": "public",
+          "timeZone": "America/Denver"
+        }
+      ]
+    },
+    {
+      "id": "sta-hyrum-diversion-public",
+      "displayName": "Little Bear River Diversion near Hyrum",
+      "externalId": "DWRI-05-0087",
+      "systemId": "sys-bear-river",
+      "providerId": "prov-coop-manual",
+      "siteTypeId": "diversion",
+      "status": "active",
+      "visibility": "public",
+      "telemetry": "manual",
+      "waterSourceTypeId": "surface-natural-flow",
+      "stateCode": "UT",
+      "latitude": 41.6295,
+      "longitude": -111.8524,
+      "elevationFt": 4462,
+      "version": 5,
+      "datastreams": [
+        {
+          "id": "str-hyrum-q-public",
+          "stationId": "sta-hyrum-diversion-public",
+          "observedPropertyId": "discharge",
+          "unitId": "cfs",
+          "methodTypeId": "method-current-meter",
+          "cadenceMinutes": 10080,
+          "validRangeMin": 0,
+          "validRangeMax": 300,
+          "visibility": "public",
+          "timeZone": "America/Denver"
+        }
+      ]
+    }
+  ]
+}

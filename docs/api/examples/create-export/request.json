@@ -1,0 +1,14 @@
+{
+  "format": "csv",
+  "filters": {
+    "distributionSystemIds": ["sys-bear-river"],
+    "observedPropertyIds": ["discharge"],
+    "dataDateRange": {
+      "mode": "any-data",
+      "start": "2026-03-06T00:00:00Z",
+      "end": "2026-03-09T00:00:00Z"
+    },
+    "processingLevels": ["reviewed", "best-available"]
+  },
+  "rowLimit": 20000
+}

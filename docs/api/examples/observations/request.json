@@ -1,0 +1,14 @@
+{
+  "method": "GET",
+  "path": "/api/v1/streams/str-corinne-q/observations",
+  "query": {
+    "start": "2026-03-08T09:00:00Z",
+    "end": "2026-03-08T21:00:00Z",
+    "processingLevel": "best-available",
+    "includeOutOfRange": true,
+    "limit": 100
+  },
+  "headers": {
+    "Authorization": "Bearer $UWDAT_TOKEN"
+  }
+}
