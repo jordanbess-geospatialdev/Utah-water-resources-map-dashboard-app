@@ -15,7 +15,8 @@
       ],
       "depends_on": [],
       "release": "MVP",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "2cc22b786dcbf5a3b609490033d34b0ea0be7eb1"
     },
     {
       "id": "WD-002",
