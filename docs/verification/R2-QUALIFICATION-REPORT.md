@@ -155,3 +155,10 @@ row, and the verdict is conditioned on the pending owner ratifications
 (OBS-3) and the BLOCKED live-environment evidence remaining on the record.**
 
 — qa_accessibility, WD-026, 2026-10-21
+
+
+### Resolution record (2026-10-21)
+
+- **DEFECT-R2-1 FIXED** — empty-window range as-of now admits the stream through policy; existing-but-unreadable and unknown ids return byte-identical hidden-object 404s for anonymous and out-of-scope actors (fix/R2-1-R2-2-defects, merged). Tripwire pins the fixed state incl. serialized byte-identity.
+- **DEFECT-R2-2 FIXED** — reconciliation counts each unique evidence id exactly once; attributed + duplicates + unattributed == raw with balanced=true on the previously failing input class (same fix). Tripwire pins the fixed state.
+- Re-run after fixes: full R2 qualification Verdict PASS, exit 0, deterministic.

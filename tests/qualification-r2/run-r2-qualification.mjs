@@ -324,9 +324,9 @@ group('T-13/R2', 'Recurring issue trends and reconciliation (WD-013-R2 suites + 
   step('cited reconciliation tests PASSED', () => {
     assertTestPassed(recon.output, 'reconciliation balances on 25 seeded fresh derivations (duplicates, unknown streams, chains)', 'trends-reconciliation');
     assertTestPassed(recon.output, 'a correction CHAIN is one incident (never one row per revision)', 'trends-reconciliation');
-    assertTestPassed(recon.output, 'DEFECT-R2-2 pinned: an exact duplicate on an UNKNOWN stream double-counts in the reconciliation arithmetic', 'trends-reconciliation');
+    assertTestPassed(recon.output, 'DEFECT-R2-2 fixed: an exact duplicate on an UNKNOWN stream counts exactly once', 'trends-reconciliation');
   });
-  note('DEFECT-R2-2 (Low, filed in the report): reconcileTrends double-counts exact duplicates delivered on streams absent from the site table (duplicatesDropped AND unattributed), so balanced=false for that input class; the flag is honest (no false balance) and no incident data is corrupted — pinned, not fixed by this gate');
+  note('DEFECT-R2-2 (Low) FIXED 2026-10-21: reconciliation counts each unique evidence id once; balanced=true on the previously failing input class; tripwire now pins the fixed state');
 });
 
 // ---------------------------------------------------------------------------
@@ -397,7 +397,7 @@ group('ADVERSARIAL', 'The R2 gate\'s own attack suites (all files, one run)', ()
     assert(summary.tests === 43, `expected 43 adversarial tests, ran ${summary.tests ?? '?'}`);
     assert((summary.fail ?? 0) === 0, `adversarial failures: ${summary.fail}`);
   });
-  note('defects found by these suites: DEFECT-R2-1 (as-of empty-window existence oracle, Medium) and DEFECT-R2-2 (trends reconciliation duplicate-on-unknown-stream arithmetic, Low) — both PINNED as tests, filed in the report, NOT fixed by this gate');
+  note('defects found by these suites: DEFECT-R2-1 and DEFECT-R2-2 — both FIXED (fix/R2-1-R2-2-defects) and pinned as regression tripwires asserting the fixed state');
 });
 
 // ---------------------------------------------------------------------------
@@ -439,7 +439,7 @@ console.log('-'.repeat(78));
 console.log(`Environment: node ${ENV.node} | pnpm ${ENV.pnpm} | ${ENV.platform}`);
 console.log(`Revision:    ${ENV.branch} @ ${ENV.commit}`);
 console.log(`Executed:    ${ENV.date}`);
-const verdict = failures === 0 ? 'R2 GATE: PASS — BLOCKED items recorded above are environment/owner gaps, not failures; DEFECT-R2-1 (Medium) and DEFECT-R2-2 (Low) filed and pinned, neither implementation-fixed by this gate' : 'R2 GATE: FAIL';
+const verdict = failures === 0 ? 'R2 GATE: PASS — all machine-checkable R2 acceptance holds on fixture evidence; environment/owner-gated items recorded BLOCKED; defects R2-1/R2-2 fixed with regression tripwires pinning the fixed state' : 'R2 GATE: FAIL';
 console.log(`Verdict:     ${verdict}`);
 console.log('Determinism: run this script twice; identical group results are required (all corpora are seeded; suites are pure and clock-injected).');
 process.exit(failures === 0 ? 0 : 1);

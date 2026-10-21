@@ -221,27 +221,29 @@ test('as-of exports for PUBLIC streams carry no canary bytes; restricted streams
   }
 });
 
-test('DEFECT-R2-1 pinned: empty-window range as-of is an EXISTENCE ORACLE for non-public streams', () => {
-  // Filed in docs/verification/R2-QUALIFICATION-REPORT.md (DEFECT-R2-1):
-  // reconstructRangeAsOf authorizes only the observations that fall INSIDE
-  // the [from, to) window. A non-public stream with NO observations in the
-  // window skips authorization entirely and answers 200 ok — echoing the
-  // stream id in the result — while an UNKNOWN stream id answers the
-  // hidden-object 404. An anonymous (or out-of-scope) caller can therefore
-  // probe whether a restricted stream id exists, contradicting the module's
-  // own rule that "a restricted stream stays hidden from out-of-scope
-  // actors (cross-scope denial maps to a hidden-object 404)". Pinned here;
-  // fixing it must update this test and the report.
+test('DEFECT-R2-1 fixed: empty-window range as-of is hidden-object parity for non-public streams', () => {
+  // DEFECT-R2-1 FIXED (2026-10-21, fix/R2-1-R2-2-defects): reconstructRangeAsOf
+  // now admits the STREAM through policy when the window is empty, so an
+  // existing-but-unreadable stream and an unknown id return byte-identical
+  // hidden-object 404s. This tripwire now pins the FIXED state for anonymous
+  // AND out-of-scope actors (both must be indistinguishable from unknown),
+  // while readable actors still get ok with zero points.
   const store = createRevisionStore();
   const probed = 'str-ogden-q-proposed'; // restricted fixture stream with no observations
   assert.ok(store.world.objects[probed], 'precondition: the probed stream exists in the policy world');
   assert.ok(!store.observations.some((observation) => observation.streamId === probed), 'precondition: no observations in any window');
   const empty = asof.reconstructRangeAsOf(store, { principal: null, streamId: probed, from: '2026-01-01T00:00:00Z', to: '2027-01-01T00:00:00Z', asOf: '2026-03-09T00:00:00Z' });
-  assert.equal(empty.outcome, 'ok', 'DEFECT-R2-1: the anonymous empty-window range currently answers ok (pinned)');
-  assert.equal(empty.points.length, 0, 'DEFECT-R2-1: ...with zero points (no data leaks, existence only)');
+  assert.equal(empty.outcome, 'denied', 'DEFECT-R2-1 regression: anonymous empty-window on a non-public stream must deny');
+  if (empty.outcome === 'denied') {
+    assert.equal(empty.status, 404, 'hidden-object 404');
+    assert.ok(!JSON.stringify(empty).includes(probed), 'denial must not name the hidden stream');
+  }
   const unknown = asof.reconstructRangeAsOf(store, { principal: null, streamId: 'str-does-not-exist', from: '2026-01-01T00:00:00Z', to: '2027-01-01T00:00:00Z', asOf: '2026-03-09T00:00:00Z' });
-  assert.equal(unknown.outcome, 'denied', 'an unknown stream id denies (the distinguisher)');
-  if (unknown.outcome === 'denied') assert.equal(unknown.status, 404);
+  assert.equal(unknown.outcome, 'denied', 'an unknown stream id denies');
+  if (unknown.outcome === 'denied') {
+    assert.equal(unknown.status, 404);
+    assert.equal(JSON.stringify(unknown), JSON.stringify(empty), 'existing-unreadable and unknown must be byte-identical (no existence oracle)');
+  }
 });
 
 // ---------------------------------------------------------------------------

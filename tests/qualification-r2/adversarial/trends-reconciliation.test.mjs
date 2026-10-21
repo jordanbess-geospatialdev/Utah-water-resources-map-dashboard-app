@@ -148,17 +148,12 @@ test('a correction CHAIN is one incident (never one row per revision)', () => {
   if (incidentsForChain.length === 1) assert.equal(incidentsForChain[0].hitCount, chain.length);
 });
 
-test('DEFECT-R2-2 pinned: an exact duplicate on an UNKNOWN stream double-counts in the reconciliation arithmetic', () => {
-  // Filed in docs/verification/R2-QUALIFICATION-REPORT.md (DEFECT-R2-2):
-  // reconcileTrends() counts every ARRAY entry on a stream absent from the
-  // site table as unattributed (including exact duplicate deliveries), and
-  // ALSO counts those duplicates in duplicatesDropped (raw - unique). One
-  // record delivered twice on an unknown stream therefore adds 2
-  // unattributed + 1 duplicate = 3 against 2 raw records, and balanced
-  // flips to false. The boolean honestly reports the imbalance (no silent
-  // false-balance), and no incident data is corrupted — the defect is the
-  // arithmetic only. Pinned here; fixing it must update this test and the
-  // report.
+test('DEFECT-R2-2 fixed: an exact duplicate on an UNKNOWN stream counts exactly once', () => {
+  // DEFECT-R2-2 FIXED (2026-10-21, fix/R2-1-R2-2-defects): reconcileTrends
+  // now counts unattributed per UNIQUE evidence id, so a duplicate delivery
+  // on an unknown stream is a duplicate only. This tripwire pins the FIXED
+  // state: attributed + duplicatesDropped + unattributed == raw with
+  // balanced=true on this input class.
   const input = {
     now: NOW,
     streamMeta: { 'str-known': { streamId: 'str-known', stationId: 'sta-1', systemId: 'sys-1', visibility: 'public' } },
@@ -171,9 +166,9 @@ test('DEFECT-R2-2 pinned: an exact duplicate on an UNKNOWN stream double-counts 
   const reconciliation = trends.reconcileTrends(input, report.incidents);
   assert.equal(reconciliation.rawRecordCount, 2, 'precondition: two deliveries of one record');
   assert.equal(reconciliation.duplicatesDropped, 1);
-  assert.equal(reconciliation.unattributedCount, 2, 'DEFECT-R2-2: the duplicate is ALSO counted as unattributed (pinned)');
-  assert.equal(reconciliation.balanced, false, 'DEFECT-R2-2: balanced is currently false for this input (pinned)');
-  assert.deepEqual(reconciliation.doubleCountedIds, [], 'no incident-level double count (the defect is arithmetic only)');
+  assert.equal(reconciliation.unattributedCount, 1, 'DEFECT-R2-2 regression: the unique record counts once, never per delivery');
+  assert.equal(reconciliation.balanced, true, '1 attributed-less unique + 1 duplicate + 1 unattributed-unique balances');
+  assert.deepEqual(reconciliation.doubleCountedIds, [], 'no incident-level double count');
 });
 
 test('the PUBLIC projection still reconciles: recomputed aggregates balance over the surviving incidents', () => {
