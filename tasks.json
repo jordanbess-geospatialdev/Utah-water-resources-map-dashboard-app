@@ -151,7 +151,8 @@
         "WD-008"
       ],
       "release": "MVP",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "9bba581fe0f49700df132a6a4dfdf7e9e0722d80"
     },
     {
       "id": "WD-010",
