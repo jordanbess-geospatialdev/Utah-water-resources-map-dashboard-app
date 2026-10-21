@@ -1,4 +1,5 @@
 # utah-water-dashboard
+developed by Jordan Bess
 
 Utah Water Measurement Data Dashboard — production monorepo.
 
