@@ -80,7 +80,8 @@
         "WD-004"
       ],
       "release": "MVP",
-      "status": "in_progress"
+      "status": "completed",
+      "merged_commit": "48e5eacb4e003186a95b875f7b77ea6b8a1c25e8"
     },
     {
       "id": "WD-006",
