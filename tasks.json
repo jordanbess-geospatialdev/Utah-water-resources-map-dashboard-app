@@ -47,7 +47,8 @@
         "WD-002"
       ],
       "release": "MVP",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "0fe6c371dc36f15a97768fd6d672799abf9fc981"
     },
     {
       "id": "WD-004",
