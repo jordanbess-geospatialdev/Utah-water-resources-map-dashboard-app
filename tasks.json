@@ -88,13 +88,15 @@
       "write_scopes": [
         "apps/web/src/shell/**",
         "apps/web/src/components/**",
-        "apps/web/src/map/shell/**"
+        "apps/web/src/map/shell/**",
+        "apps/web/tests/**"
       ],
       "depends_on": [
         "WD-002"
       ],
       "release": "MVP",
-      "status": "planned"
+      "status": "planned",
+      "scope_note": "apps/web/tests/** added 2026-10-21 by orchestrator: prototype test port target for the app package (tests/** root remains QA-owned)."
     },
     {
       "id": "WD-007",
