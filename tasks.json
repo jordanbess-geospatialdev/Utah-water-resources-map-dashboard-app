@@ -514,7 +514,8 @@
         "WD-016"
       ],
       "release": "R2",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "8c9272b9b4ed6ef9d57f51fd91ce09c26c873f03"
     },
     {
       "id": "WD-025-R2",
