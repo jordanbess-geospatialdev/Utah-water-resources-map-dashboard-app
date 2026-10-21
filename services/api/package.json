@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test --experimental-strip-types \"src/workflows/revisions/test/*.test.ts\""
+    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\""
   }
 }
