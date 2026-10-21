@@ -387,7 +387,10 @@ export const PUBLIC_ACTIONS: ReadonlySet<string> = new Set(['browse-published'])
  * - edit-permitted-site-fields satisfies edit-site-metadata because the
  *   commissioner variant IS the matrix row 5 "Assigned permitted fields"
  *   grant (field-subset refinement arrives with WD-010).
- * Nothing here may exceed ROLE_CEILING for the role that carries the grant.
+ * Nothing here may exceed ROLE_CEILING for the role that carries the grant;
+ * the single entry the ceiling does not back (statewide-administration for
+ * field-visits) is bound to the steward persona family by
+ * SATISFACTION_ROLE_GATES below (WD-004 / DEFECT-Q3).
  */
 export const CAPABILITY_SATISFIES: Readonly<Record<string, readonly Capability[]>> = {
   'browse-published': ['browse-published'],
@@ -423,12 +426,51 @@ export const CAPABILITY_SATISFIES: Readonly<Record<string, readonly Capability[]
   'withdraw-raw': ['withdraw-raw', 'statewide-administration'],
   'manage-own-tokens': ['manage-own-tokens'],
   'supplier-reporting': ['supplier-reporting'],
+  // Field visits are engineer-profile work (field/automation/regional); the
+  // steward entry is persona-gated - see SATISFACTION_ROLE_GATES below.
   'field-visits': ['field-visits', 'statewide-administration'],
   'view-internal-diagnostics': ['view-internal-diagnostics', 'statewide-administration'],
   'read-approved-datasets': ['read-approved-datasets', 'statewide-administration'],
   'create-exports': ['create-exports', 'statewide-administration'],
   'generate-reports': ['generate-reports', 'statewide-administration'],
   'statewide-administration': ['statewide-administration'],
+};
+
+/**
+ * Persona-family gates on capability satisfaction (WD-004, DEFECT-Q3).
+ *
+ * DECISION: `statewide-administration` satisfies `field-visits` ONLY when
+ * the requesting principal belongs to the steward role family.
+ *
+ * Rationale: the authorization matrix (02-technical-specification.md,
+ * "Proposed authorization matrix") gives the Diego column no site-visit row
+ * of its own - field visits are engineer-profile verbs (field, automation,
+ * regional; "Field, regional, automation and modeler are capability
+ * profiles under the engineer family"), and `POST /sites/{id}/visits` is
+ * "Assigned field documentation". ROLE_CEILING.steward accordingly does not
+ * list field-visits, so an unguarded satisfaction entry let ANY holder of a
+ * bare statewide-administration grant perform field visits - authority no
+ * ceiling backs (the file's own rule: a satisfaction entry may never exceed
+ * the matrix ceiling for the role that carries the grant).
+ *
+ * The entry is not deleted from CAPABILITY_SATISFIES because the steward
+ * persona's statewide site-visit authority is intended and pinned by the
+ * qualification suite; instead the satisfaction is bound to the persona
+ * family the statewide column belongs to (a bare statewide grant is not a
+ * steward role). This mirrors the deputy pattern in the engine, where the
+ * 'deputy' role label plus a delegation block narrows what a grant may do:
+ * a role label never grants anything by itself, but it can restrict what a
+ * capability satisfies. An ungated satisfier is unaffected, and an
+ * identical field-visits grant always satisfies regardless of family.
+ *
+ * Audit note (T-02 asserts this as an invariant): every OTHER action whose
+ * satisfaction set includes statewide-administration is itself listed in
+ * ROLE_CEILING.steward, so the grant-time ceiling guard already confines
+ * those satisfactions to the steward; field-visits was the single
+ * satisfaction/ceiling mismatch.
+ */
+export const SATISFACTION_ROLE_GATES: Readonly<Record<string, Readonly<Record<string, readonly RoleFamily[]>>>> = {
+  'field-visits': { 'statewide-administration': ['steward'] },
 };
 
 /**

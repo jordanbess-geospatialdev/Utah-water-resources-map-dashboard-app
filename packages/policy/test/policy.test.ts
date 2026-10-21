@@ -29,12 +29,16 @@ import {
   evaluate,
   evaluatePublicRead,
   isCurrentlyPublished,
+  satisfiesCapability,
+  satisfiesCapabilityFor,
   AUTHORIZATION_MATRIX,
   DEPUTY_DELEGATION_POLICY,
   DOCUMENTED_BOUNDARIES,
   ENGINEER_FAMILY_CEILING,
   ENGINEER_PROFILES,
   ROLE_CEILING,
+  CAPABILITY_SATISFIES,
+  SATISFACTION_ROLE_GATES,
 } from '../src/index.ts';
 import type {
   AuthorizationRequest,
@@ -488,6 +492,125 @@ test('engineers request ingestion configuration for their system; only the stewa
   assert.equal(decide(regional, 'configure-ingestion', 'prov-dwri-telemetry', undefined, undefined, variantWorld).reason, 'DENY_CAPABILITY_NOT_GRANTED');
   assert.equal(decide(ACTORS.fatima, 'configure-ingestion', 'prov-dwri-telemetry').reason, 'DENY_CAPABILITY_NOT_GRANTED');
   assert.equal(decide(ACTORS.diego, 'configure-ingestion', 'prov-dwri-telemetry').effect, 'allow');
+});
+
+// ---------------------------------------------------------------------------
+// Statewide satisfaction is steward-persona-bound (WD-004 / DEFECT-Q3)
+// ---------------------------------------------------------------------------
+
+/**
+ * A bare statewide-administration grant is NOT a steward role: the
+ * authorization matrix has no site-visit row for Diego (field visits are
+ * engineer-profile verbs) and ROLE_CEILING.steward does not list
+ * field-visits, so statewide-administration may satisfy field-visits only
+ * for the steward persona family (SATISFACTION_ROLE_GATES).
+ */
+const rogueStatewideCommissioner: Principal = {
+  id: 'principal-rogue-statewide-commissioner',
+  displayName: 'Rogue commissioner (bare statewide grant, no steward role)',
+  roles: ['commissioner'],
+  active: true,
+  assignedSystemId: null,
+};
+const bareStewardAdmin: Principal = {
+  id: 'principal-bare-steward-admin',
+  displayName: 'Steward-family administrator (bare statewide grant, not the fixture steward)',
+  roles: ['steward'],
+  active: true,
+  assignedSystemId: null,
+};
+const bareStatewideEntitlement = (id: string, principalId: string, role: string, grantVersion: number): RawEntitlement => ({
+  id,
+  principalId,
+  role,
+  capabilities: ['statewide-administration'],
+  scopeType: 'statewide',
+  scopeId: null,
+  effectiveAt: '2025-07-01T00:00:00Z',
+  expiresAt: null,
+  status: 'active',
+  delegation: null,
+  grantedBy: 'principal-diego-steward',
+  grantVersion,
+});
+
+const gateWorld = buildWorld({
+  principals: principalsFixture,
+  stations: stationsFixture,
+  extraPrincipals: [rogueStatewideCommissioner, bareStewardAdmin],
+  extraEntitlements: [
+    bareStatewideEntitlement('ent-rogue-statewide', 'principal-rogue-statewide-commissioner', 'commissioner', 30),
+    bareStatewideEntitlement('ent-bare-steward-statewide', 'principal-bare-steward-admin', 'steward', 31),
+  ],
+});
+
+test('DEFECT-Q3: a bare statewide-administration grant denies field-visits outside the steward role family', () => {
+  // The latent widening, closed: a commissioner holding ONLY
+  // statewide-administration (a grant ROLE_CEILING says must never leave the
+  // steward console) no longer satisfies field-visits.
+  const rogue = gateWorld.principals['principal-rogue-statewide-commissioner'] ?? null;
+  const denied = decide(rogue, 'field-visits', 'sta-bear-corinne', undefined, undefined, gateWorld);
+  assert.equal(denied.effect, 'deny');
+  assert.equal(denied.reason, 'DENY_CAPABILITY_NOT_GRANTED', 'the gated satisfaction is no capability grant for this principal');
+  // The steward still allows: the fixture steward (roles: ['steward'])...
+  assert.equal(decide(ACTORS.diego, 'field-visits', 'sta-bear-corinne').effect, 'allow');
+  // ...and any steward-family principal with the same bare statewide grant.
+  const bareSteward = gateWorld.principals['principal-bare-steward-admin'] ?? null;
+  assert.equal(decide(bareSteward, 'field-visits', 'sta-bear-corinne', undefined, undefined, gateWorld).effect, 'allow');
+  // An identical field-visits grant is never persona-gated: the assigned
+  // field engineer keeps recording visits.
+  assert.equal(decide(ACTORS.fatima, 'field-visits', 'sta-bear-corinne').effect, 'allow');
+});
+
+test('DEFECT-Q3 gate mechanics: the satisfaction entry stays listed; the gate is principal-aware', () => {
+  // The table question is unchanged (the qualification suite pins the entry):
+  // a statewide-administration grant carries a listed field-visits satisfier.
+  assert.equal(CAPABILITY_SATISFIES['field-visits'].includes('statewide-administration'), true);
+  assert.equal(satisfiesCapability('field-visits', ['statewide-administration']), true);
+  assert.equal(ROLE_CEILING.steward.includes('field-visits'), false, 'precondition: the steward ceiling excludes field-visits');
+  // The principal-aware evaluation the engine consults enforces the gate.
+  assert.equal(satisfiesCapabilityFor('field-visits', ['statewide-administration'], ACTORS.diego), true);
+  assert.equal(satisfiesCapabilityFor('field-visits', ['statewide-administration'], ACTORS.cody), false);
+  assert.equal(satisfiesCapabilityFor('field-visits', ['statewide-administration'], null), false, 'no principal, no gated satisfaction');
+  assert.equal(satisfiesCapabilityFor('field-visits', ['field-visits'], ACTORS.cody), true, 'identical grants are never gated');
+  // Other statewide satisfaction rows are not persona-gated (they are all
+  // backed by ROLE_CEILING.steward, asserted below).
+  assert.equal(satisfiesCapabilityFor('enter-readings', ['statewide-administration'], ACTORS.cody), true);
+});
+
+test('DEFECT-Q3 audit: every statewide-administration satisfaction is ceiling-backed or persona-gated', () => {
+  // edit-permitted-site-fields is the commissioner field-subset variant of
+  // edit-site-metadata (matrix row 5 note: "deliberately weaker than full
+  // edit-site-metadata"). The full verb in ROLE_CEILING.steward dominates
+  // it, so its statewide satisfaction cannot exceed the steward ceiling.
+  const DOMINATED_BY: Readonly<Record<string, readonly Capability[]>> = {
+    'edit-permitted-site-fields': ['edit-site-metadata'],
+  };
+  for (const [action, satisfiers] of Object.entries(CAPABILITY_SATISFIES)) {
+    if (!satisfiers.includes('statewide-administration')) continue;
+    const directlyListed = ROLE_CEILING.steward.includes(action as Capability);
+    const dominated = (DOMINATED_BY[action] ?? []).some((stronger) => ROLE_CEILING.steward.includes(stronger));
+    const personaGated = SATISFACTION_ROLE_GATES[action]?.['statewide-administration']?.includes('steward') ?? false;
+    assert.ok(
+      directlyListed || dominated || personaGated,
+      `${action}: statewide-administration satisfaction must be listed in ROLE_CEILING.steward (directly or via a dominating verb) or gated to the steward family`,
+    );
+  }
+});
+
+test('satisfaction gates reference listed satisfiers and name real role families', () => {
+  assert.ok(Object.keys(SATISFACTION_ROLE_GATES).length >= 1);
+  for (const [action, gates] of Object.entries(SATISFACTION_ROLE_GATES)) {
+    const satisfiers = CAPABILITY_SATISFIES[action];
+    assert.ok(satisfiers, `${action}: a gated action must exist in CAPABILITY_SATISFIES`);
+    for (const [satisfier, families] of Object.entries(gates)) {
+      assert.ok(satisfiers?.includes(satisfier as Capability), `${action}: gated satisfier "${satisfier}" must be listed in the satisfaction row`);
+      assert.ok(families.length > 0, `${action}/${satisfier}: a gate names at least one role family`);
+      for (const family of families) {
+        assert.ok(Array.isArray(ROLE_CEILING[family]), `${action}/${satisfier}: gate names a real role family "${family}"`);
+      }
+    }
+  }
 });
 
 // ---------------------------------------------------------------------------
