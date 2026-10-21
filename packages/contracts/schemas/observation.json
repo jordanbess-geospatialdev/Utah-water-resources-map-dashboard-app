@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/observation.json",
+  "title": "Observation",
+  "description": "Original automated or manual observation (technical specification 'Original observation' row). Originals are immutable: corrections append revisions, they never overwrite. Observation time (observedAt, a UTC instant) and ingestion time (receivedAt) are distinct from the first release. sourceOffset preserves the source-local UTC offset at capture so DST transitions remain reconstructible. A null value is a reported-but-empty reading and is NOT zero; a missing reading is represented by the absence of an observation plus a declared gap.",
+  "type": "object",
+  "required": ["id", "logicalKey", "streamId", "observedAt", "sourceOffset", "unitId", "valueType", "processingLevel", "sourceEventId", "receivedAt"],
+  "properties": {
+    "id": { "type": "string", "description": "Stable observation identifier." },
+    "logicalKey": { "type": "string", "description": "Composite logical key (stream + observed instant) used by revision and history endpoints. Duplicate source events may share a logical key with distinct ids." },
+    "streamId": { "type": "string", "description": "Datastream identifier." },
+    "observedAt": { "type": "string", "description": "UTC instant the phenomenon was observed (RFC 3339, Z)." },
+    "sourceOffset": { "type": "string", "description": "Source-local UTC offset at capture, e.g. -07:00 (MST) or -06:00 (MDT)." },
+    "value": { "type": ["number", "null"], "description": "Source value in unitId. Null means reported no-value; zero means zero; both occur in fixtures." },
+    "unitId": { "type": "string", "description": "Governed unit identifier (source units are preserved)." },
+    "valueType": { "type": "string", "enum": ["observed", "estimated", "computed"], "description": "Observed versus estimated is preserved end-to-end and never silently converted." },
+    "processingLevel": { "type": "string", "enum": ["raw", "provisional", "reviewed", "best-available"], "description": "Level of THIS record. Originals enter as raw; revisions carry later levels." },
+    "sourceEventId": { "type": "string", "description": "Provider event identifier; unique within a stream. Retransmissions produce a new event id and may duplicate an instant." },
+    "receivedAt": { "type": "string", "description": "UTC instant the backend accepted the record. Late arrivals have receivedAt far after observedAt." },
+    "sourceId": { "type": "string", "description": "Ingestion source/provider record identifier." },
+    "methodTypeId": { "type": "string" },
+    "note": { "type": ["string", "null"], "description": "Provider or entry note." }
+  }
+}

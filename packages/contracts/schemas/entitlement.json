@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dwri.utah.gov/contracts/schemas/entitlement.json",
+  "title": "Entitlement",
+  "description": "Assignment grant evaluated on every endpoint, queued job, download and spatial request (technical specification 'Assignment' row; allow_public_read OR allow_protected). Scoped object membership is resolved server-side; a body actorId or browser role switch never grants anything. Deputies act only through an explicit, time-bounded delegation - never automatically statewide. Concurrent revocation invalidates entitlement caches; the authoritative assignment version is rechecked on each protected request.",
+  "type": "object",
+  "required": ["id", "principalId", "role", "scopeType", "scopeId", "effectiveAt", "expiresAt", "status", "grantedBy", "grantVersion"],
+  "properties": {
+    "id": { "type": "string" },
+    "principalId": { "type": "string", "description": "Person or organization holding the grant." },
+    "role": { "type": "string", "enum": ["engineer", "commissioner", "deputy", "steward", "researcher", "owner"], "description": "Role family. Engineer sub-profiles (field, regional, automation, modeler) are capability subsets, not extra authority." },
+    "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Action-specific granted capabilities, e.g. enter-readings, revise-best-available, edit-site-metadata, create-sites, withdraw-raw." },
+    "scopeType": { "type": "string", "enum": ["system", "organization", "site", "statewide", "dataset"], "description": "Kind of object the grant is scoped to." },
+    "scopeId": { "type": ["string", "null"], "description": "Scoped object identifier; null only for statewide scope." },
+    "effectiveAt": { "type": "string", "description": "UTC instant the grant becomes valid." },
+    "expiresAt": { "type": ["string", "null"], "description": "UTC instant the grant lapses; null means no scheduled expiry." },
+    "status": { "type": "string", "enum": ["active", "revoked"], "description": "Authoritative status; revoked wins over any cached copy." },
+    "delegation": {
+      "type": ["object", "null"],
+      "description": "Present only for deputy grants: an explicit delegation with effective and expiry dates.",
+      "properties": {
+        "effectiveAt": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "delegatedBy": { "type": "string" }
+      }
+    },
+    "grantedBy": { "type": "string", "description": "Audited grantor principal." },
+    "grantVersion": { "type": "integer", "description": "Monotonic assignment version; protected requests compare against this to refuse stale caches." }
+  }
+}

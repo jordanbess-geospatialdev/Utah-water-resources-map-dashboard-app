@@ -1,0 +1,156 @@
+{
+  "$comment": "Principals and entitlement grants for the fixture world (seed utah-water-fixture-v1). Two water-owner organizations; two engineers assigned to DIFFERENT systems (Fatima: Bear River, Priya: Weber River); one commissioner with one explicitly delegated, time-bounded deputy; one steward; one researcher. Every entitlement matches schemas/entitlement.json. Actor identity is always derived server-side from the session or scoped token, never from a request body field (FR-010).",
+  "seed": "utah-water-fixture-v1",
+  "organizations": [
+    {
+      "id": "org-cache-water",
+      "name": "Cache Water Conservancy District",
+      "kind": "water-owner",
+      "description": "Water-owner organization A. Restricted-owner station sta-hyrum-diversion-owner belongs to it."
+    },
+    {
+      "id": "org-bear-river-users",
+      "name": "Bear River Water Users Association",
+      "kind": "water-owner",
+      "description": "Water-owner organization B. Holds no fixture station at v0.1.0; exists so cross-owner denial tests do not collapse onto one organization."
+    }
+  ],
+  "users": [
+    {
+      "id": "principal-diego-steward",
+      "displayName": "Diego Ruiz",
+      "roles": ["steward"],
+      "active": true,
+      "description": "Statewide data steward: users, assignments, vocabulary, systems, ingestion and QC administration."
+    },
+    {
+      "id": "principal-fatima-engineer",
+      "displayName": "Fatima Al-Rashid",
+      "roles": ["engineer"],
+      "active": true,
+      "assignedSystemId": "sys-bear-river",
+      "description": "Engineer A. Assigned to the Bear River system only."
+    },
+    {
+      "id": "principal-priya-engineer",
+      "displayName": "Priya Natarajan",
+      "roles": ["engineer"],
+      "active": true,
+      "assignedSystemId": "sys-weber-river",
+      "description": "Engineer B. Assigned to the Weber River system only; must receive nothing from Bear River."
+    },
+    {
+      "id": "principal-cody-commissioner",
+      "displayName": "Cody Jensen",
+      "roles": ["commissioner"],
+      "active": true,
+      "assignedSystemId": "sys-bear-river",
+      "description": "Commissioner for the Bear River system; may delegate part of this authority explicitly."
+    },
+    {
+      "id": "principal-ana-deputy",
+      "displayName": "Ana Whitehorse",
+      "roles": ["deputy"],
+      "active": true,
+      "assignedSystemId": "sys-bear-river",
+      "description": "Deputy commissioner. Authority exists only through the explicit delegation below, bounded by effective and expiry dates; never automatically statewide."
+    },
+    {
+      "id": "principal-sarah-researcher",
+      "displayName": "Sarah Kimball",
+      "roles": ["researcher"],
+      "active": true,
+      "description": "Researcher with an approved dataset grant and scoped API credentials; a token cannot exceed this account's current authority."
+    }
+  ],
+  "entitlements": [
+    {
+      "id": "ent-steward-diego",
+      "principalId": "principal-diego-steward",
+      "role": "steward",
+      "capabilities": ["statewide-administration", "manage-users", "manage-assignments", "manage-vocabulary", "configure-ingestion", "review-data"],
+      "scopeType": "statewide",
+      "scopeId": null,
+      "effectiveAt": "2025-07-01T00:00:00Z",
+      "expiresAt": null,
+      "status": "active",
+      "delegation": null,
+      "grantedBy": "principal-diego-steward",
+      "grantVersion": 4
+    },
+    {
+      "id": "ent-engineer-fatima",
+      "principalId": "principal-fatima-engineer",
+      "role": "engineer",
+      "capabilities": ["enter-readings", "revise-best-available", "edit-site-metadata", "create-sites", "field-visits", "view-internal-diagnostics"],
+      "scopeType": "system",
+      "scopeId": "sys-bear-river",
+      "effectiveAt": "2025-10-01T00:00:00Z",
+      "expiresAt": null,
+      "status": "active",
+      "delegation": null,
+      "grantedBy": "principal-diego-steward",
+      "grantVersion": 7
+    },
+    {
+      "id": "ent-engineer-priya",
+      "principalId": "principal-priya-engineer",
+      "role": "engineer",
+      "capabilities": ["enter-readings", "revise-best-available", "edit-site-metadata", "create-sites", "field-visits"],
+      "scopeType": "system",
+      "scopeId": "sys-weber-river",
+      "effectiveAt": "2026-01-12T00:00:00Z",
+      "expiresAt": null,
+      "status": "active",
+      "delegation": null,
+      "grantedBy": "principal-diego-steward",
+      "grantVersion": 3
+    },
+    {
+      "id": "ent-commissioner-cody",
+      "principalId": "principal-cody-commissioner",
+      "role": "commissioner",
+      "capabilities": ["enter-readings", "revise-best-available", "review-data", "edit-permitted-site-fields", "generate-reports"],
+      "scopeType": "system",
+      "scopeId": "sys-bear-river",
+      "effectiveAt": "2025-10-01T00:00:00Z",
+      "expiresAt": null,
+      "status": "active",
+      "delegation": null,
+      "grantedBy": "principal-diego-steward",
+      "grantVersion": 11
+    },
+    {
+      "id": "ent-deputy-ana",
+      "principalId": "principal-ana-deputy",
+      "role": "deputy",
+      "capabilities": ["enter-readings", "review-data"],
+      "scopeType": "system",
+      "scopeId": "sys-bear-river",
+      "effectiveAt": "2026-03-01T07:00:00Z",
+      "expiresAt": "2026-06-30T23:59:59Z",
+      "status": "active",
+      "delegation": {
+        "effectiveAt": "2026-03-01T07:00:00Z",
+        "expiresAt": "2026-06-30T23:59:59Z",
+        "delegatedBy": "principal-cody-commissioner"
+      },
+      "grantedBy": "principal-diego-steward",
+      "grantVersion": 2
+    },
+    {
+      "id": "ent-researcher-sarah",
+      "principalId": "principal-sarah-researcher",
+      "role": "researcher",
+      "capabilities": ["read-approved-datasets", "create-exports", "manage-own-tokens"],
+      "scopeType": "dataset",
+      "scopeId": "dataset-approved-discharge-v1",
+      "effectiveAt": "2026-02-01T00:00:00Z",
+      "expiresAt": "2027-02-01T00:00:00Z",
+      "status": "active",
+      "delegation": null,
+      "grantedBy": "principal-diego-steward",
+      "grantVersion": 1
+    }
+  ]
+}
