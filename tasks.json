@@ -391,7 +391,8 @@
         "WD-025"
       ],
       "release": "MVP",
-      "status": "planned"
+      "status": "awaiting_owner_acceptance",
+      "status_note": "All agent-executable deliverables complete (release notes, UAT plan, 12-row sign-off register). Acceptance requires named humans per the register; cannot be closed by the delivery team."
     },
     {
       "id": "WD-023",
