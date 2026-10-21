@@ -1,0 +1,17 @@
+#!/bin/sh
+# commit-msg — enforces evidence trailers on agent work branches (feat/fix/test/contract).
+# The orchestrator's integration/main/release commits are not branch-enforced.
+branch=$(git rev-parse --abbrev-ref HEAD)
+case "$branch" in
+  feat/*|fix/*|contract/*) need="Agent: Task:" ;;
+  test/*) need="Agent: Tests:" ;;
+  *) exit 0 ;;
+esac
+msg=$(cat "$1")
+for trailer in $need; do
+  echo "$msg" | grep -q "^${trailer}[[:space:]]*[^[:space:]]" || {
+    echo "commit-msg: branch $branch requires a \"$trailer <value>\" trailer in the message" >&2
+    exit 1
+  }
+done
+exit 0

@@ -1,0 +1,65 @@
+name: ci
+
+# PR gates per ADR-13 / the development plan "Repository topology, branches,
+# and worktrees". Direct pushes to main and integration are rejected by branch
+# protection on the host; this workflow is the required status check.
+
+on:
+  pull_request:
+    branches: [integration, main]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: scope, trailers, migrations, lockfile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Derive task id from branch name
+        id: task
+        run: |
+          BR="${{ github.head_ref }}"
+          echo "id=$(echo "$BR" | grep -oE '(WD|R2)-[0-9]+(-R2)?' | head -1 || true)" >> "$GITHUB_OUTPUT"
+      - name: Run repository gates
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: node scripts/gate.mjs all "${{ steps.task.outputs.id }}"
+
+  build:
+    name: install, lint, typecheck, unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (frozen; tolerated absent before the first lockfile lands)
+        run: |
+          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else echo "no lockfile yet"; fi
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan changed lines for credential patterns
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          git diff "$BASE...HEAD" +U | grep -nE "(AKIA[0-9A-Z]{16}|BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY|xox[baprs]-[0-9A-Za-z]{10,}|AIza[0-9A-Za-z_-]{35})" \
+            && { echo "secret-like pattern found"; exit 1; } || echo "clean"
