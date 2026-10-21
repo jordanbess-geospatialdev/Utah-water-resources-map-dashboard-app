@@ -1,0 +1,22 @@
+{
+  "$note": "SYNTHETIC SAMPLE - authored fixture, NOT a capture from a real NeoServer. Cohort workspace variant of the TileJSON fixture: a relative tiles template on the water-bear-cohort workspace whose source-layer id is 'stations_restricted'. Used to prove cohort TileJSON is resolved against the trusted base, re-mapped same-origin, and served with private, no-store caching.",
+  "tilejson": "3.0.0",
+  "name": "stations-restricted",
+  "description": "SYNTHETIC cohort projection (fields safe for every cohort member)",
+  "minzoom": 6,
+  "maxzoom": 14,
+  "bounds": [-112.2, 41.4, -111.4, 42.0],
+  "tiles": [
+    "/workspaces/water-bear-cohort/ogc-tiles/collections/stations-restricted/tiles/WebMercatorQuad/{z}/{y}/{x}"
+  ],
+  "vector_layers": [
+    {
+      "id": "stations_restricted",
+      "description": "SYNTHETIC cohort station layer",
+      "fields": {
+        "id": "String",
+        "displayName": "String"
+      }
+    }
+  ]
+}

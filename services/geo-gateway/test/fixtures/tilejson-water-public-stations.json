@@ -1,0 +1,24 @@
+{
+  "$note": "SYNTHETIC SAMPLE - authored fixture, NOT a capture from a real NeoServer. Shape modeled on the TileJSON (RFC 8337 / Mapbox v3) the qualification stack is expected to serve for /workspaces/water-public/ogc-tiles/collections/stations/tilejson.json (tobilg/neoserver docs/ogc-api-tiles.md). The tiles entry is deliberately ROOT-RELATIVE so tests prove resolution happens against the trusted service base and never the browser origin. vector_layers[0].id 'stations_public' deliberately differs from the collection id 'stations' so tests prove the source-layer is taken from evidence, not guessed.",
+  "tilejson": "3.0.0",
+  "name": "stations",
+  "description": "SYNTHETIC statewide station overview (public projection)",
+  "minzoom": 4,
+  "maxzoom": 14,
+  "bounds": [-114.1, 37.0, -108.9, 42.1],
+  "attribution": "SYNTHETIC Utah Water Measurement Data Dashboard fixture",
+  "tiles": [
+    "/workspaces/water-public/ogc-tiles/collections/stations/tiles/WebMercatorQuad/{z}/{y}/{x}"
+  ],
+  "vector_layers": [
+    {
+      "id": "stations_public",
+      "description": "SYNTHETIC public station layer",
+      "fields": {
+        "id": "String",
+        "displayName": "String",
+        "status": "String"
+      }
+    }
+  ]
+}

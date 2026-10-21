@@ -1,0 +1,7 @@
+# Secrets never leave the machine.
+.env
+
+# Captured qualification artifacts are evidence, not source: recorded/ holds
+# the committed EXPECTATIONS.md checklist and receives generated captures.
+qualification/recorded/*
+!qualification/recorded/EXPECTATIONS.md

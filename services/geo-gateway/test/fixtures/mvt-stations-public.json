@@ -1,0 +1,6 @@
+{
+  "$note": "SYNTHETIC SAMPLE - hand-encoded minimal Mapbox Vector Tile, NOT a capture from a real NeoServer. protobuf wire format per MVT 2.1: Tile{ layers: [ Layer{ version: 2 (field 15 varint), name: 'stations_public' (field 1 string) } ] } - hex 1a 13 78 02 0a 0f 'stations_public', gzip-wrapped here. The layer name intentionally matches vector_layers[0].id of tilejson-water-public-stations.json so the decoded-header control check proves the source-layer comes from the tile bytes and the TileJSON, agreeing with each other. Regenerate with node+zlib if needed; never treat this as server output.",
+  "sourceLayer": "stations_public",
+  "tileHex": "1a1378020a0f73746174696f6e735f7075626c6963",
+  "gzipBase64": "H4sIAAAAAAAACpMSrmDi4i8uSSzJzM8rji8oTcrJTAYA7k7vvhUAAAA="
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@utah-water/geo-gateway",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Authorized same-origin gateway for NeoServer spatial services (WD-005). Zero runtime dependencies; Node built-ins only.",
+  "scripts": {
+    "test": "node --test --experimental-strip-types test/*.test.ts"
+  }
+}
