@@ -145,6 +145,20 @@ test('missing values render as empty fields, never as 0', () => {
   assert.equal(fields[CSV_COLUMNS.indexOf('value')], '');
 });
 
+test('CSV manifest size counts UTF-8 bytes for non-ASCII names', () => {
+  const rendered = renderObservationCsv([{
+    stationId: 'sta-x', stationDisplayName: 'Río 💧', streamId: 'str-x',
+    observedPropertyId: 'discharge', unitId: 'cfs',
+    points: [{
+      observationId: 'obs-x', collapsedDuplicateIds: [], observedAt: T0,
+      receivedAt: T0, sourceOffset: '-07:00', sourceEventId: 'ev-x', sourceId: 'src-x',
+      value: 0, rawValue: 0, unitId: 'cfs', valueType: 'observed', processingLevel: 'raw',
+      revisionId: null, qualifierIds: [], estimated: false, flags: [], rawFlags: [],
+    }],
+  }]);
+  assert.equal(rendered.byteLength, Buffer.byteLength(rendered.csv, 'utf8'));
+});
+
 // ---------------------------------------------------------------------------
 // Golden CSV bytes
 // ---------------------------------------------------------------------------
@@ -299,6 +313,19 @@ test('time cap: a running job past the cap fails on tick', () => {
   assert.equal(afterFail.outcome === 'denied' && afterFail.code, 'INVALID_STATE');
 });
 
+test('complete enforces the time cap even when the worker did not tick', () => {
+  let now = T0;
+  const manager = new ExportJobManager({ store, now: () => now });
+  const created = manager.create({ streamIds: ['str-corinne-q'], start: '2026-03-08T00:00:00Z', end: '2026-03-09T00:00:00Z', basis: 'raw' }, null);
+  assert.equal(created.outcome, 'allowed');
+  if (created.outcome !== 'allowed') return;
+  manager.start(created.value.id);
+  now = new Date(Date.parse(T0) + EXPORT_LIMITS.jobTimeCapMs + 1).toISOString();
+  const completed = manager.complete(created.value.id);
+  assert.equal(completed.outcome === 'denied' && completed.code, 'EXPORT_TIME_CAP_EXCEEDED');
+  assert.equal(manager.job(created.value.id)?.status, 'failed');
+});
+
 test('download expiry: a succeeded manifest expires after the TTL', () => {
   const base = Date.parse(T0);
   let calls = 0;
@@ -378,6 +405,19 @@ test('revoked grant fails the job CLOSED on download: no bytes, terminal failed'
   assert.equal(jobAfter!.failure!.policyReason, 'DENY_ASSIGNMENT_REVOKED');
   const never = manager.download(job.id, 'principal-fatima-engineer');
   assert.equal(never.outcome === 'denied' && never.code, 'FORBIDDEN', 'the failed job never serves bytes again');
+});
+
+test('a denied outsider download cannot destroy the authorized owner artifact', () => {
+  const manager = new ExportJobManager({ store, now: clock() });
+  const created = manager.create({ streamIds: ['str-hyrum-q-owner'], start: '2026-03-04T00:00:00Z', end: '2026-03-09T00:00:00Z', basis: 'raw' }, 'principal-fatima-engineer');
+  assert.equal(created.outcome, 'allowed');
+  if (created.outcome !== 'allowed') return;
+  manager.start(created.value.id);
+  manager.complete(created.value.id);
+  const outsider = manager.download(created.value.id, 'principal-priya-engineer');
+  assert.equal(outsider.outcome, 'denied');
+  assert.equal(manager.job(created.value.id)?.status, 'succeeded');
+  assert.equal(manager.download(created.value.id, 'principal-fatima-engineer').outcome, 'allowed');
 });
 
 test('determinism: the same job script produces identical ids, manifests and bytes', () => {

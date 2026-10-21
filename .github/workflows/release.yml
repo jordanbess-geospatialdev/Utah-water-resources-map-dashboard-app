@@ -33,6 +33,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  RELEASE_TAG: ${{ inputs.version_tag }}
+  RELEASE_ENVIRONMENT: ${{ inputs.environment }}
+
 jobs:
   preflight:
     name: verify tag matches integration HEAD
@@ -45,30 +49,15 @@ jobs:
       - name: Validate tag format
         run: |
           set -euo pipefail
-          TAG="${{ inputs.version_tag }}"
+          TAG="$RELEASE_TAG"
           echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' \
             || { echo "::error::tag '$TAG' is not semver vX.Y.Z"; exit 1; }
       - name: Fail closed unless the signed tag points at integration HEAD
         run: |
           set -euo pipefail
-          TAG="${{ inputs.version_tag }}"
           git fetch --no-tags origin "+refs/heads/integration:refs/remotes/origin/integration"
           git fetch --tags --force origin
-          INTEGRATION_SHA="$(git rev-parse refs/remotes/origin/integration)"
-          if ! git rev-parse -q --verify "refs/tags/${TAG}^{commit}" >/dev/null 2>&1; then
-            echo "::error::tag ${TAG} does not exist. An authorized operator must create the signed tag first (see the tag-signing-instructions artifact from a previous run, or ops/runbooks/deploy.md)."
-            exit 1
-          fi
-          TAG_SHA="$(git rev-parse "refs/tags/${TAG}^{commit}")"
-          echo "integration HEAD: ${INTEGRATION_SHA}"
-          echo "tag commit:       ${TAG_SHA}"
-          if [ "${TAG_SHA}" != "${INTEGRATION_SHA}" ]; then
-            echo "::error::tag ${TAG} (${TAG_SHA}) does not match origin/integration HEAD (${INTEGRATION_SHA}). Re-tag after integration lands, or pick the tag that matches."
-            exit 1
-          fi
-          if ! git cat-file tag "${TAG}" >/dev/null 2>&1; then
-            echo "::warning::tag ${TAG} is lightweight, not an annotated/signed tag. Release policy requires signed tags (04-ai-development-and-testing.md 'Branch protection and audit')."
-          fi
+          node scripts/verify-release-tag.mjs
 
   suite:
     name: full suite + build all artifacts
@@ -95,7 +84,7 @@ jobs:
       - name: Typecheck (where configured)
         run: pnpm -r --if-present run typecheck
       - name: Unit / contract / integration tests (where defined)
-        run: pnpm -r --if-present run test
+        run: pnpm test
       - name: Build all artifacts (where configured)
         run: pnpm -r --if-present run build
       - name: Upload build outputs for manifest hashing
@@ -149,8 +138,8 @@ jobs:
           cat > release-manifest.json <<JSONEOF
           {
             "schema": "utah-water-release-manifest/1",
-            "release_tag": "${{ inputs.version_tag }}",
-            "target_environment": "${{ inputs.environment }}",
+            "release_tag": "${RELEASE_TAG}",
+            "target_environment": "${RELEASE_ENVIRONMENT}",
             "deployment_authorized": false,
             "commit": "${COMMIT_SHA}",
             "lockfile": { "path": "pnpm-lock.yaml", "sha256": "${LOCKFILE_SHA}" },
@@ -182,8 +171,9 @@ jobs:
           $   git fetch origin && git rev-parse origin/integration
 
           $ COMMIT=<manifest-commit-sha>
-          $ git tag -s ${{ inputs.version_tag }} -m "Release ${{ inputs.version_tag }} from $COMMIT" "$COMMIT"
-          $ git push origin ${{ inputs.version_tag }}
+          $ TAG=<approved-version-tag>
+          $ git tag -s "$TAG" -m "Release $TAG from $COMMIT" "$COMMIT"
+          $ git push origin "$TAG"
 
           3. Record the tag, manifest sha256, approving owner and ticket in the
           release evidence (docs/releases/**), then dispatch this workflow
@@ -212,7 +202,7 @@ jobs:
           echo "::error::requires explicit environment authorization"
           echo "WD-024 acceptance: deployment and live database access stay disabled"
           echo "until the platform owner records explicit authorization for"
-          echo "'${{ inputs.environment }}'. Until then this job intentionally fails"
+          echo "'${RELEASE_ENVIRONMENT}'. Until then this job intentionally fails"
           echo "closed and this run's red X is the expected state."
           echo "Pre-authorization checklist: infra/runtime/README.md"
           echo "Runbook (when authorized):   ops/runbooks/deploy.md"

@@ -1,11 +1,15 @@
 # ops — runtime operations for the Utah Water dashboard (WD-024)
 
-Status: **AUTHORED / NOT EXECUTED.** Everything here defines the reproducible
-pipeline and recovery posture required by WD-024. No deployment, live
-database access, staging drill or restore has run: those are explicitly
-pending until an environment exists and authorization is recorded (see the
-authorization gate in `ops/runbooks/deploy.md` and the qualification
-checklist in `infra/runtime/README.md`).
+Status: **RUNBOOKS AUTHORED; SYNTHETIC NEOSERVER QUALIFICATION RECORDED.**
+The 21 October 2026 [capture report](../infra/neoserver/qualification/recorded/CAPTURE-REPORT.md)
+records disposable Docker/PostGIS protocol checks, external-write cache refresh,
+single-writer exclusion, restart and quiesced NeoServer store recovery. Those
+checks used synthetic data and the stack was removed afterward. They do not
+establish a production deployment or complete the application-wide database,
+secret-recovery, telemetry-loss and rollback drills. Re-run the required drills
+against the approved release environment and manifest before acceptance; see
+the [deployment gate](runbooks/deploy.md) and
+[qualification checklist](../infra/runtime/README.md).
 
 | Path | Purpose |
 | --- | --- |
@@ -68,3 +72,7 @@ Checks (each fails the run with a specific finding):
   ships to an authorized deployment is a blocked release.
 - Drills and restores never run against production first; disposable staging
   with synthetic data only, log discipline per NFR-009.
+- Release preflight verifies the annotated tag's signature and commit. The
+  runner must have the approved public signing keys and trust configuration;
+  absent keys or a failed signature check block release. The setup and ownership
+  are recorded in the [deploy runbook](runbooks/deploy.md).

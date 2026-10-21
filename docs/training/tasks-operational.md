@@ -6,6 +6,11 @@ Bear River (Cody, Fatima) and statewide (Diego). Every task cites its
 feature module and the observable outcome a trainer checks. Task ids match
 the onboarding tour steps.
 
+Use this as an acceptance checklist after the integrations listed in the
+[training plan](README.md) are complete. Several panels and server routes are
+currently standalone modules; their fixture tests do not constitute a passed
+user task.
+
 ## Cody - commissioner
 
 ### com-morning-review - Morning review
@@ -19,8 +24,8 @@ the onboarding tour steps.
   sees nothing outside the Bear River assignment.
 
 ### com-enter-reading - Enter a single reading
-- Module: measurement entry surface (technical specification, "Measurement
-  entry"; validation in `services/api/src/series`).
+- Module: `apps/web/src/features/data-entry/ManualEntryForm.tsx`, with server
+  validation in `services/api/src/workflows/readings/manualEntry.ts`.
 - Steps: enter a reading with the wrong unit; correct the unit; commit with
   a valid value.
 - Observable outcome: the wrong-unit attempt is refused with a row-level
@@ -28,9 +33,9 @@ the onboarding tour steps.
   time recorded.
 
 ### com-bulk-paste - Bulk paste a season of readings
-- Module: imports workflow (`services/api/src/exports`, staged
-  validate/commit per the technical specification "Bulk paste/import";
-  366-row minimum scenario).
+- Module: `apps/web/src/features/data-entry/BulkPastePanel.tsx`, with staged
+  validation and commit in `services/api/src/workflows/readings/bulkImport.ts`
+  (366-row minimum scenario).
 - Steps: paste a full season of daily readings including one bad row and
   one duplicate; validate; inspect the row report; fix and commit.
 - Observable outcome: the trainee sees per-row errors and duplicates BEFORE
@@ -144,7 +149,7 @@ the onboarding tour steps.
 
 ## Recording failures
 
-Any task a trainee cannot complete is reported from the Help panel on the
-task's screen, category "Training feedback", quoting the task id (for
-example `com-bulk-paste`). The steward queue prioritizes it per FR-018 and
-the program assigns a named owner for the backlog item (FR-068).
+Record failures through the [training plan's reporting procedure](README.md#recording-pilot-failures),
+quoting the task id (for example `com-bulk-paste`). Use the team's agreed issue
+tracker until Help submissions reach a persistent steward queue. Assign each
+item a severity and named owner (FR-068).

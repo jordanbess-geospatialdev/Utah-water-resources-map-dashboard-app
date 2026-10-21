@@ -10,8 +10,11 @@
   "scripts": {
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test",
+    "test": "pnpm run test:scripts && pnpm -r --if-present run test",
     "test:unit": "pnpm test",
+    "test:scripts": "node --test scripts/*.test.mjs",
+    "test:qualification": "node tests/qualification/run-qualification.mjs",
+    "build": "pnpm -r --if-present run build",
     "gate": "node scripts/gate.mjs"
   }
 }

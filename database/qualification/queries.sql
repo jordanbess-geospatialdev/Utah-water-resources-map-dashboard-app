@@ -51,7 +51,8 @@ SELECT amname FROM pg_am WHERE amname = 'gist';
 
 -- 2a. Diff of station columns NOT projected by v_public_stations.
 --     Expected: owner_organization_id, version, created_at, updated_at,
---     system_id, provider_id (internal identifiers/stamps) - and NOTHING ELSE
+--     system_id, provider_id, visibility (internal identifiers/stamps and
+--     the publication classification) - and NOTHING ELSE
 --     that is descriptive of the station. The restricted detail block lives in
 --     water.station_internal_detail, which this view never references.
 SELECT column_name

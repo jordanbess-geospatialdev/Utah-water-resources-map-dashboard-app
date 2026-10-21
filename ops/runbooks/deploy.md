@@ -19,6 +19,8 @@ A green build is never authorization.
 
 1. **Release provenance exists and verifies.** The `release` workflow
    (`.github/workflows/release.yml`) ran to its manifest stage for the tag:
+   - the tag is annotated and its signature passes `git verify-tag`; a
+     lightweight, unsigned or unverifiable tag is rejected,
    - the signed tag's commit equals `origin/integration` HEAD (preflight
      verified it; re-check at execution time),
    - `release-manifest.json` records the commit SHA, `pnpm-lock.yaml`
@@ -44,6 +46,23 @@ A green build is never authorization.
    (`ops/runbooks/incident.md` routing table).
 8. **Change record approved** per the production change policy (human
    ownership and release decisions, `04-ai-development-and-testing.md`).
+
+### Signing-key verification setup
+
+Before dispatching the workflow, the platform/security owner must configure
+the runner with approved public signing keys and the trust or allowed-signers
+configuration for the repository's signing format. Record the accepted signer
+fingerprints, key source, owner and rotation/revocation procedure in the release
+environment's configuration evidence. Only verification material belongs in
+this runner setup; an operator's private signing key is not needed to verify a
+tag.
+
+The repository does not provision this keyring. On an unconfigured runner,
+`git verify-tag` fails and the release must stop. Missing keys are a setup
+blocker, not permission to skip verification or accept an unsigned tag. Tag
+signature validity, a match to the approved signer configuration and a match
+to `origin/integration` are all prerequisites; deployment still requires the
+separate environment authorization above.
 
 ## Deploy order
 

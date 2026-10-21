@@ -134,9 +134,12 @@ carry "rate limits independent of interactive sessions"). 429 responses carry
   <tokenId> principal=<principalId>` (see `TokenService.auditLog()`).
 - The salted hash is stored, not logged on request paths; a hash in a log
   line is treated as an incident.
-- Examples in this documentation use placeholders exclusively; CI secret
-  scanning treats any `uwdat_`-shaped literal in source or bundles as a
-  failure (T-16: no secrets in bundle/source maps).
+- Examples in this documentation use placeholders exclusively. The CI source
+  scanner checks added source lines for full token-shaped literals
+  (`uwdat_` plus 32 base62 characters); short placeholders and prefix constants
+  are allowed. It does not scan generated bundles or source maps. The token
+  unit tests check their own fixture store and audit output; release artifact
+  scanning remains a separate T-16 requirement.
 
 ## Storage and verification properties
 

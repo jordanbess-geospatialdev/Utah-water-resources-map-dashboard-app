@@ -191,7 +191,7 @@ export function createAssignmentService(deps: AssignmentServiceDeps): Assignment
   const gate = (stewardId: string | null, granteeId: string): GateOutcome => {
     const userObject = deps.world.objects[granteeId] ?? governanceObject({ id: granteeId, kind: 'user' });
     return gateAct(
-      { world: withExtraObjects(deps.world, [userObject]), clock, policy },
+      { world: withExtraObjects(rebuildWorld(), [userObject]), clock, policy },
       stewardId,
       'manage-assignments',
       { kind: 'user', id: granteeId },

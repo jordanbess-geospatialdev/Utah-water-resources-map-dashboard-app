@@ -133,14 +133,10 @@ export default function Chart({ points, gapBands, unitId, stationName, emphasis,
     <div className="chart-wrap">
       <svg
         viewBox="0 0 620 205"
-        role="img"
+        role="group"
         aria-label={`Raw and best available discharge for ${stationName}; ${points.length} points in window; select a point for its value and flags`}
       >
         <defs>
-          <linearGradient id="chart-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#118a7e" stopOpacity="0.16" />
-            <stop offset="1" stopColor="#118a7e" stopOpacity="0" />
-          </linearGradient>
           <pattern id="gap-hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
             <line x1="0" y1="0" x2="0" y2="6" stroke="#b9b1a0" strokeWidth="1.4" />
           </pattern>
@@ -173,9 +169,8 @@ export default function Chart({ points, gapBands, unitId, stationName, emphasis,
             </text>
           </g>
         )}
-        {geometry.bestSegments.length > 0 && (
-          <path d={`${geometry.bestSegments[0]} L${PLOT.right - 4},${PLOT.bottom} L${PLOT.left},${PLOT.bottom} Z`} fill="url(#chart-area)" />
-        )}
+        {/* Draw only the segmented lines: a plot-wide area fill would imply
+            values across declared gaps and after the first segment ends. */}
         {geometry.rawSegments.map((segment, i) => (
           <path key={`raw-${i}`} d={segment} fill="none" stroke="#b1b8bb" strokeWidth={emphasised ? 1.8 : 2.4} strokeDasharray="4 4" opacity={emphasised ? 0.9 : 1} />
         ))}

@@ -6,6 +6,11 @@ the feature module, the steps, and the observable outcome a trainer checks.
 Task ids match the onboarding tour steps
 (`apps/web/src/features/help/OnboardingTour.tsx`).
 
+Use this as an acceptance checklist after the integrations listed in the
+[training plan](README.md) are complete. Several panels and server routes are
+currently standalone modules; their fixture tests do not constitute a passed
+user task.
+
 ## Donna - public / policy overview
 
 ### pub-discover - Discover stations

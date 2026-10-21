@@ -1,8 +1,10 @@
 # Rollback runbook (WD-024) — artifacts and migrations
 
-Status: **AUTHORED / NOT EXECUTED.** Rehearsed in disposable staging only
-(T-14 rollback drill); never executed against a deployed environment because
-no deployment is authorized yet.
+Status: **AUTHORED; APPLICATION ROLLBACK REHEARSAL PENDING.** Rehearse this
+runbook in an approved disposable environment before release acceptance.
+The recorded NeoServer restart/store recovery checks do not prove artifact
+rollback, application compatibility or migration roll-forward. No production
+rollback is authorized by those synthetic checks.
 
 ## Decision order
 

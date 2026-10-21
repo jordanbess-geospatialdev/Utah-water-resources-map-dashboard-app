@@ -276,12 +276,12 @@ group('T-05', 'Geo-gateway suite + recorded live-capture expectations', () => {
   });
 
   const report = readFileSync(join(PATHS.recorded, 'CAPTURE-REPORT.md'), 'utf8');
-  step('CAPTURE-REPORT records the honest 14/14 capture outcome and the open MVT-version defect', () => {
+  step('CAPTURE-REPORT preserves the historical 14/14 capture outcome and MVT-version finding', () => {
     assert(report.includes('14/14 captures at expected statuses'), 'outcome line missing');
-    assert(/MVT layer version 1/i.test(report), 'the honest MVT layer version 1 FAIL (defect D5) must stay recorded');
+    assert(/MVT layer version 1/i.test(report), 'the historical MVT layer version 1 FAIL (defect D5) must stay recorded');
   });
 
-  note('EXECUTED: live capture on the pinned Docker stack, 2026-10-21 by the T-05 agent (digests pinned, 13/14 machine checks pass; D5 MVT layer version 1 fails honestly and stays open with spatial_integration/DR-009)');
+  note('EXECUTED: original live capture on the pinned Docker stack, 2026-10-21 (13/14 original checks passed). KNOWN-SERVER-BEHAVIOR.md records the subsequent D5 v1/v2 compatibility policy and D7 deterministic-id correction; the frozen capture remains historical evidence.');
   blocked('live re-capture in THIS run: requires the pinned Docker stack (docker compose); no Docker daemon engaged for WD-021 — recorded evidence verified for integrity instead');
 });
 
@@ -290,7 +290,7 @@ group('T-05', 'Geo-gateway suite + recorded live-capture expectations', () => {
 // ---------------------------------------------------------------------------
 
 group('T-06/T-07/T-15', 'API domain suites (revisions, imports, reports, notifications, QC)', () => {
-  const run = cmdStep('services/api suite (463 tests)', ['node', '--test', '--experimental-strip-types', 'src/**/*.test.ts'], PATHS.api, { timeoutMs: 420_000 });
+  const run = cmdStep('services/api suite', ['node', '--test', '--experimental-strip-types', 'src/**/*.test.ts'], PATHS.api, { timeoutMs: 420_000 });
   const output = run.output;
   const keywordGroups = {
     'T-06 revisions/audit': /revise|revision|tombstone|optimistic|best-available|correction/i,
@@ -325,7 +325,7 @@ group('T-08', 'Cache and privacy (gateway cache policy + attachments visibility 
 // ---------------------------------------------------------------------------
 
 group('T-10/T-13', 'Web suites (persona projections, share codec) + AI filter injection corpus', () => {
-  cmdStep('apps/web suite (237 tests incl. projection, shareUrl, filters, AI proposal)', ['node', '--test', '--experimental-strip-types', 'tests/*.test.ts', 'src/features/**/*.test.ts', 'src/map/**/*.test.ts'], PATHS.web, { timeoutMs: 420_000 });
+  cmdStep('apps/web suite (projection, shareUrl, filters, AI proposal)', ['node', '--test', '--experimental-strip-types', 'tests/*.test.ts', 'src/features/**/*.test.ts', 'src/map/**/*.test.ts'], PATHS.web, { timeoutMs: 420_000 });
   cmdStep('api AI filter-parser suites (parser, equivalence, injection corpus)', ['node', '--test', '--experimental-strip-types', 'src/ai/filter-parser/parser.test.ts', 'src/ai/filter-parser/equivalence.test.ts', 'src/ai/filter-parser/security.test.ts'], PATHS.api);
   cmdStep('adversarial share-URL hostile corpus (60+ hostile queries, no throw, no leak, byte-stable round trips)', ['node', '--test', 'share-url-corpus.test.mjs'], PATHS.adversarial);
   const corpus = readJson(join(ROOT, 'fixtures', 'ai', 'injection-corpus.json'));

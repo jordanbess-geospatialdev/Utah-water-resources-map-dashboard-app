@@ -1,15 +1,17 @@
 # T-14 operations drills (WD-024) — scripts to execute in disposable staging
 
-Status: **AUTHORED / EXECUTION PENDING.** These drills are the T-14 evidence
+Status: **FULL RELEASE DRILLS PENDING; NEOSERVER SUBSET RECORDED.** These drills are the T-14 evidence
 ("Single NeoServer writer, restart, quiesced backup/restore, secret
 recovery, cache refresh failure, telemetry/audit-loss alert, rollback —
 drill log, restored checksum and timed recovery" per
-`docs/product/baseline/04-ai-development-and-testing.md`). They may run ONLY
-in a disposable staging environment with synthetic data once one exists; no
-Docker daemon, staging environment, live database or deployment is available
-or authorized in the authoring environment. Companion NeoServer-side drills
-(sections 8–9 of the WD-005 checklist) live in
-`infra/neoserver/qualification/recorded/EXPECTATIONS.md`.
+`docs/product/baseline/04-ai-development-and-testing.md`). They run only in an
+approved disposable environment with synthetic data. At original authoring,
+the environment was unavailable; the subsequent 21 October 2026
+[NeoServer capture](../../infra/neoserver/qualification/recorded/CAPTURE-REPORT.md)
+records external-write cache refresh, single-writer exclusion, restart and
+quiesced store backup/restore on Docker/PostGIS. The full coordinated database,
+secret-recovery, telemetry-loss and application rollback drills below remain
+pending. A recorded subset is not a complete T-14 release sign-off.
 
 Drill log discipline: every run records UTC start/end, environment id, image
 digests, the exact commands executed, pass/fail per check, timings vs RTO,

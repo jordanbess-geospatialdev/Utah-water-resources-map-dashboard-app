@@ -33,6 +33,11 @@ node --test --experimental-strip-types src/tokens/test/tokens.test.ts
    half-open `[createdAt, expiresAt)`.
 4. Wrong-secret denial is constant-time across the whole record set.
 5. Rate limits are per token, independent of interactive sessions.
+6. Datastream authorization checks the actual target ID as well as query
+   coordinates, so omitted or conflicting `streamId` values cannot bypass a
+   token's stream list. Malformed, empty, reversed and out-of-range date
+   windows are denied. The transport must resolve effective query defaults
+   before checking property, processing-level and date bounds.
 
 Operational policy (scope model, 90-day lifetime proposal, rotation runbook,
 logging rules) is documented in `docs/api/TOKEN-POLICY.md`.

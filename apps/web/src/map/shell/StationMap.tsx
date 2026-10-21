@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { createLayerSync } from '@geolibre/map';
 import { AlertTriangle, Crosshair, Layers, Loader2, MapPin } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { buildStationLayers, CLASS_COLORS, stationLayerClass } from './layers';
 import { basemapById, type BasemapId } from './basemap';
 import { createRequestGuard } from './requestGuard';
+import { createViewportFitTracker } from './viewportFit';
 import type { StationProjection } from '../../shell/data/projection';
+
+// MapLibre 6 cannot discover its worker beside Vite's renamed application
+// bundle. The worker pipeline also bundles its shared-module dependencies.
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
 export interface MapCamera {
   center: [number, number];
@@ -59,6 +65,7 @@ export function StationMap({
   const map = useRef<maplibregl.Map | null>(null);
   const engine = useRef<ReturnType<typeof createLayerSync> | null>(null);
   const styleGuard = useRef(createRequestGuard());
+  const viewportFit = useRef(createViewportFitTracker(stations));
   const [status, setStatus] = useState<MapStatus>('loading');
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState('');
@@ -86,15 +93,16 @@ export function StationMap({
       if (!m) return;
       const token = styleGuard.current.begin();
       setStatus('loading'); // no layer sync while the style is transitioning
-      m.setStyle(basemapById(id).style);
       m.once('style.load', () => {
         if (!styleGuard.current.isCurrent(token)) return; // superseded: reject the stale reload
         engine.current?.sync(layersFor(latest.current.stations, latest.current.selectedStationId));
         setStatus('ready');
-        fit();
       });
+      // Subscribe first: MapLibre can emit style.load synchronously during a
+      // diff. A full replacement matches the managed-layer reapply contract.
+      m.setStyle(basemapById(id).style, { diff: false });
     },
-    [fit, layersFor],
+    [layersFor],
   );
 
   // The basemap applied by the current map instance; null right after (re)mount.
@@ -131,7 +139,7 @@ export function StationMap({
       if (!styleGuard.current.isCurrent(token)) return;
       engine.current?.sync(layersFor(latest.current.stations, latest.current.selectedStationId));
       setStatus('ready');
-      fit();
+      if (!initialCamera) fit();
     });
 
     m.on('click', (e) => {
@@ -154,6 +162,7 @@ export function StationMap({
     const observer = new ResizeObserver(() => m.resize());
     observer.observe(root.current);
     return () => {
+      styleGuard.current.begin(); // reject callbacks belonging to the disposed map
       observer.disconnect();
       sync.dispose(); // GeoLibre rule: dispose synchronization before destroying the map
       m.remove();
@@ -179,7 +188,7 @@ export function StationMap({
   }, [basemapId, status, applyBasemap]);
 
   useEffect(() => {
-    if (status === 'ready') fit();
+    if (status === 'ready' && viewportFit.current.changed(stations)) fit();
   }, [stations, status, fit]);
 
   const counts = LAYER_LEGEND.map((entry) => ({

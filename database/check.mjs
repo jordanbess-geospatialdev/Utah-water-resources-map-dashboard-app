@@ -200,6 +200,22 @@ const migrations = migrationFiles.map((f) => ({
   pass('forbidden-column-leak', `restricted names confined to ${[...PRIVATE_TABLES_ALLOWED_FORBIDDEN][0]} across ${migrations.length} migration files`);
 }
 
+// The final definition of each public view must enforce the same lifecycle
+// as packages/policy isCurrentlyPublished; older migrations remain immutable.
+{
+  const latestViews = new Map();
+  for (const migration of migrations) {
+    for (const view of extractViews(migration.clean)) latestViews.set(view.name, view);
+  }
+  for (const name of ['water.v_public_stations', 'water.v_public_station_summary']) {
+    const view = latestViews.get(name);
+    if (!view || !/WHERE\s+s\.visibility\s*=\s*'public'\s+AND\s+s\.status\s+IN\s*\(\s*'active'\s*,\s*'inactive'\s*\)/i.test(view.body)) {
+      fail('views/publication-lifecycle', `${name} must publish only public active/inactive stations`);
+    }
+  }
+  pass('views/publication-lifecycle', 'final public views exclude proposed and retired stations');
+}
+
 // ---------------------------------------------------------------------------
 // (e) fixture loader output matches expected row counts exactly
 // ---------------------------------------------------------------------------
@@ -223,6 +239,12 @@ const migrations = migrationFiles.map((f) => ({
     const [, table, cols] = m;
     const columns = cols.split(',').map((c) => c.trim()).filter(Boolean);
     if (columns.length === 0) fail('fixtures/loader', `empty column list for water.${table}`);
+    if (/VALUES\s*\(NULL(?:,|\))/.test(line)) {
+      fail('fixtures/loader', `fixture row has a NULL leading identifier in water.${table}`);
+    }
+    if (/ARRAY\[\](?!::text\[\])/.test(line)) {
+      fail('fixtures/loader', `empty array lacks an explicit text[] type in water.${table}`);
+    }
     counts.set(table, (counts.get(table) ?? 0) + 1);
   }
   if (counts.size === 0) fail('fixtures/loader', 'loader emitted no INSERT statements');

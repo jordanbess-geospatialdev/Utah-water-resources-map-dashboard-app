@@ -360,6 +360,26 @@ test('a deactivated account can neither issue nor use tokens', () => {
 // scopeEval: token scopes intersect the policy decision (FR-064/FR-065)
 // ---------------------------------------------------------------------------
 
+test('a stream scope is checked against the actual target, even if query coordinates are absent or spoofed', () => {
+  const issued = issueDefault(harness());
+  for (const query of [{}, { streamId: 'str-corinne-q' }]) {
+    const decision = authorizeScoped(issued.token, 'observations:read', { kind: 'datastream', id: 'str-corinne-stage' }, query, baseWorld, NOW);
+    assert.equal(decision.effect, 'deny');
+    assert.equal(decision.scopeReason, 'STREAM_NOT_IN_SCOPE');
+  }
+});
+
+test('malformed and reversed query date bounds cannot pass a token date-range check', () => {
+  const scopes = issueDefault(harness()).token.scopes;
+  for (const query of [
+    { start: 'not-a-date', end: '2026-03-03T00:00:00Z' },
+    { start: '2026-03-02T00:00:00Z', end: 'not-a-date' },
+    { start: '2026-03-03T00:00:00Z', end: '2026-03-02T00:00:00Z' },
+  ]) {
+    assert.equal(scopeCoversQuery(scopes, query).covered, false);
+  }
+});
+
 test('scope narrowing: a token without a dimension cannot query it (403, never clamped)', () => {
   const h = harness();
   const issued = issueDefault(h);

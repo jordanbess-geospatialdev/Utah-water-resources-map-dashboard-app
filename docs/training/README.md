@@ -5,6 +5,14 @@ and disable its automatic return; commissioners receive task-based training,
 and observed pilot task failures feed a prioritized backlog with named
 owners."
 
+**Readiness:** these checklists are acceptance scripts for the integrated
+application. The current entry point renders the fixture shell; the Help,
+onboarding and other feature panels still need shell wiring. Feedback and
+consent services also need an HTTP transport and persistence. A locally queued
+report in the standalone Help panel is not delivered to a steward and is lost
+when that component is discarded. Do not record those workflows as passed UAT
+until the integrations are in place.
+
 ## How training is organized
 
 | Audience | Checklist | Personas |
@@ -27,11 +35,12 @@ implements it and, where relevant, the requirement it traces to.
 2. **Task-based training** - the two checklists in this directory.
    The Help panel (`apps/web/src/features/help/HelpPanel.tsx`) summarizes
    the same tasks in-app and links each persona to their checklist.
-3. **Feedback into a prioritized backlog** - feedback submitted from Help
-   (`services/api/src/support/feedback.ts`) carries a redaction-verified,
-   reproducible support context (FR-018) and lands in the steward queue with
-   a P1-P4 priority; observed pilot task failures are reported from the task
-   screen with the checklist step id in the category "Training feedback".
+3. **Feedback into a prioritized backlog** - the domain implementation
+   (`services/api/src/support/feedback.ts`) validates reproducible support
+   context (FR-018) and provides a steward queue with P1-P4 priorities. The
+   Help panel accepts an injected submit handler; without one it only keeps a
+   temporary local summary. Once connected, observed pilot task failures can
+   include the checklist step id in the category "Training feedback".
 
 ## Trainer notes
 
@@ -48,7 +57,9 @@ implements it and, where relevant, the requirement it traces to.
 
 ## Recording pilot failures
 
-When a trainee cannot complete a task, the trainer reports it from the Help
+Until submission and queue persistence are integrated, record failures in the
+team's agreed issue tracker with the requirement, checklist step, severity,
+reproduction and owner. After integration, the trainer can report from the Help
 panel on the exact screen, category "Training feedback", including the
 checklist step id (for example `pub-indicator-read`). The steward queue then
 carries a reproducible link (public view state only) and assigns priority

@@ -34,7 +34,7 @@ const UTAH_LATITUDE_MAX = 42.1;
 
 export function stationLayerClass(station: StationProjection): StationLayerClass {
   if (station.status !== 'active' || station.freshness === 'no-data') return 'unavailable';
-  if (station.freshness === 'stale') return 'attention';
+  if (station.freshness === 'stale' || (station.latest?.flags.length ?? 0) > 0) return 'attention';
   return 'current';
 }
 

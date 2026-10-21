@@ -87,6 +87,18 @@ test('the fixture deputy grant revokes the same way: Ana loses Bear River on the
   assert.equal(enterReadings(revoked.world, ANA, at).reason, 'DENY_ASSIGNMENT_REVOKED');
 });
 
+test('a steward cannot keep administering grants after its own authority is revoked', () => {
+  const svc = service();
+  const ownGrant = world.assignments.find((assignment) => assignment.principalId === DIEGO)!;
+  assert.ok(svc.revoke(DIEGO, ownGrant.id).ok);
+  const before = svc.serialize();
+  const grant = svc.grant(DIEGO, { principalId: CODY, role: 'commissioner', capabilities: ['enter-readings'], scopeType: 'system', scopeId: 'sys-bear-river' });
+  assert.ok(!grant.ok && 'denied' in grant, 'revocation must be consulted by the next administrative operation');
+  const revoke = svc.revoke(DIEGO, 'ent-deputy-ana');
+  assert.ok(!revoke.ok && 'denied' in revoke);
+  assert.equal(svc.serialize(), before, 'denied operations must leave grants and audit history unchanged');
+});
+
 test('grant-version counter is monotonic across grants, delegations and revocations', () => {
   const svc = service();
   const start = svc.grantVersionCounter();

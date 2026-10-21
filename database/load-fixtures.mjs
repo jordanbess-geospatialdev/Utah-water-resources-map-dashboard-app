@@ -94,7 +94,7 @@ function sqlValue(v) {
 }
 
 function textArray(values) {
-  return raw(`ARRAY[${values.map(sqlString).join(',')}]`);
+  return raw(`ARRAY[${values.map(sqlString).join(',')}]::text[]`);
 }
 
 const inserts = [];
@@ -150,18 +150,21 @@ const manifestFx = readJson('seed-manifest.json');
 const PROCESSING_LEVEL_RANK = { raw: 1, provisional: 2, reviewed: 3, 'best-available': 4 };
 
 emit('vocab_unit', ['unit_id', 'name', 'dimension', 'description'],
-  [...vocabularyFx.units].sort((a, b) => byKey(a.id, b.id)));
+  [...vocabularyFx.units].sort((a, b) => byKey(a.id, b.id))
+    .map((unit) => ({ ...unit, unit_id: unit.id })));
 
 emit('vocab_observed_property', ['observed_property_id', 'name', 'dimension', 'canonical_unit_id', 'description'],
-  [...vocabularyFx.observedProperties].sort((a, b) => byKey(a.id, b.id)));
+  [...vocabularyFx.observedProperties].sort((a, b) => byKey(a.id, b.id))
+    .map((property) => ({ ...property, observed_property_id: property.id, canonical_unit_id: property.canonicalUnitId })));
 
 emit('vocab_qualifier', ['qualifier_id', 'name', 'description'],
-  [...vocabularyFx.qualifiers].sort((a, b) => byKey(a.id, b.id)));
+  [...vocabularyFx.qualifiers].sort((a, b) => byKey(a.id, b.id))
+    .map((qualifier) => ({ ...qualifier, qualifier_id: qualifier.id })));
 
 emit('vocab_processing_level', ['processing_level_id', 'name', 'description', 'rank'],
   [...vocabularyFx.processingLevels]
     .sort((a, b) => byKey(a.id, b.id))
-    .map((l) => ({ ...l, rank: PROCESSING_LEVEL_RANK[l.id] ?? fail(`unknown processing level ${l.id}`) })));
+    .map((l) => ({ ...l, processing_level_id: l.id, rank: PROCESSING_LEVEL_RANK[l.id] ?? fail(`unknown processing level ${l.id}`) })));
 
 // ---------------------------------------------------------------------------
 // Parties
@@ -188,7 +191,8 @@ const systemIdByKey = new Map(systemNodes.map((n) => [n.id, idOf('system', n.id)
 emit('distribution_system',
   ['system_id', 'system_key', 'kind', 'parent_system_id', 'name', 'state_codes', 'description'],
   [...systemNodes]
-    .sort((a, b) => byKey(a.id, b.id))
+    // The immediate self-FK requires root systems before their subgroups.
+    .sort((a, b) => Number(a.parent !== null) - Number(b.parent !== null) || byKey(a.id, b.id))
     .map((n) => ({
       system_id: systemIdByKey.get(n.id),
       system_key: n.id,

@@ -114,5 +114,5 @@ export function renderObservationCsv(selections: readonly CsvStreamSelection[]):
     }
   }
   const csv = `${lines.join('\r\n')}\r\n`;
-  return { csv, rowCount: lines.length - 1, byteLength: csv.length };
+  return { csv, rowCount: lines.length - 1, byteLength: new TextEncoder().encode(csv).byteLength };
 }

@@ -1,9 +1,13 @@
 # Backup and restore runbook (WD-024) — NeoServer store + PostgreSQL
 
-Status: **AUTHORED / NOT EXECUTED.** The restore drill below is T-14
-evidence and must run in disposable staging first; no live database or store
-has been accessed (WD-024 acceptance keeps live access disabled until
-explicit authorization).
+Status: **COORDINATED RELEASE RESTORE PENDING; SYNTHETIC STORE RESTORE RECORDED.**
+The 21 October 2026 [NeoServer capture](../../infra/neoserver/qualification/recorded/CAPTURE-REPORT.md)
+records a quiesced store backup restored into a fresh Docker volume, with
+matching served tile bytes. It does not establish recovery of the full
+application database, revisions, grants, attachments and outbox within
+ratified RPO/RTO targets. Execute the coordinated T-14 drill below in an
+approved disposable environment before release acceptance. Production access
+and restoration remain subject to explicit environment authorization.
 
 ## Objectives (RPO/RTO — PLACEHOLDERS pending owner ratification)
 

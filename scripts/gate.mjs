@@ -11,21 +11,29 @@
 //
 // BASE_REF defaults to "integration" locally; CI sets origin/<base>.
 import { readFileSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const git = (args) => execSync(`git ${args}`, { encoding: 'utf8', cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
+const git = (args) => execFileSync('git', args, { encoding: 'utf8', cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'], maxBuffer: 16 * 1024 * 1024 }).trim();
 const base = process.env.BASE_REF || 'integration';
-const branch = git('rev-parse --abbrev-ref HEAD');
+// Exclude the hosting provider's generated PR merge commit from source-branch
+// checks. CI supplies the exact PR head SHA, which must exist in fetched history.
+const head = process.env.PR_HEAD_SHA || 'HEAD';
+// PR checkouts use a detached merge commit. Apply branch rules to the PR's
+// source branch, not the literal "HEAD" reported by that checkout.
+const branch = process.env.GITHUB_HEAD_REF || git(['rev-parse', '--abbrev-ref', 'HEAD']);
 
 let mergeBase = null;
-try { mergeBase = git(`merge-base ${base} HEAD`); } catch { /* branch without base history */ }
+try { mergeBase = git(['merge-base', base, head]); } catch {
+  console.error('GATE FAIL [base] cannot resolve a common base; fetch the base branch and full history');
+  process.exit(1);
+}
 
-const changed = mergeBase
-  ? git(`diff --name-only ${mergeBase} HEAD`).split('\n').filter(Boolean)
-  : [];
+// Disable rename detection so renaming an existing migration also counts as
+// deleting the original, and NUL-delimit paths rather than Git-quoted strings.
+const changed = git(['diff', '--no-renames', '--name-only', '-z', mergeBase, head, '--']).split('\0').filter(Boolean);
 
 const fail = (rule, detail) => { console.error(`GATE FAIL [${rule}] ${detail}`); process.exit(1); };
 const pass = (rule, detail) => console.log(`gate ok [${rule}] ${detail}`);
@@ -41,6 +49,14 @@ const matches = (path, scope) =>
   scope.endsWith('/**') ? path.startsWith(scope.slice(0, -2)) : path === scope;
 
 function checkScope(id) {
+  // Dependency branches have no WD id. Enumerate their shared-file exception
+  // rather than bypassing scope checks for arbitrary production source changes.
+  if (!id && /^chore\/deps-/.test(branch)) {
+    const allowed = (path) => /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|(?:apps|packages|services)\/[^/]+\/package\.json|database\/package\.json|infra\/neoserver\/docker-compose\.yml)$/.test(path);
+    const offenders = changed.filter((path) => !allowed(path));
+    if (offenders.length) fail('scope', `paths outside dependency scopes:\n  ${offenders.join('\n  ')}`);
+    return pass('scope', `${changed.length} changed paths within dependency scopes`);
+  }
   if (!id) fail('scope', 'no task id derivable from branch name');
   const scopes = taskScopes(id);
   const offenders = changed.filter((p) => !scopes.some((s) => matches(p, s)));
@@ -52,7 +68,7 @@ function checkScope(id) {
 
 function checkTrailers() {
   if (!mergeBase) return pass('trailers', 'no common base with integration (bootstrap commit)');
-  const commits = git(`log --format=%H%x00%B%x1E ${mergeBase}..HEAD`)
+  const commits = git(['log', '--format=%H%x00%B%x1E', `${mergeBase}..${head}`])
     .split('\x1E').map((c) => c.trim()).filter(Boolean);
   const enforced = /^(feat|fix|test|contract)\//.test(branch);
   if (!enforced) return pass('trailers', `branch "${branch}" not trailer-enforced`);
@@ -74,7 +90,7 @@ function checkMigrations() {
   if (!mergeBase) return pass('migrations', 'no common base');
   const touched = changed.filter((p) => p.startsWith('database/migrations/'));
   const edited = touched.filter((p) => {
-    try { git(`cat-file -e ${base}:${p}`); return true; } catch { return false; }
+    try { git(['cat-file', '-e', `${base}:${p}`]); return true; } catch { return false; }
   });
   if (edited.length) {
     fail('migrations', `files already on ${base} were modified (append-only):\n  ${edited.join('\n  ')}`);

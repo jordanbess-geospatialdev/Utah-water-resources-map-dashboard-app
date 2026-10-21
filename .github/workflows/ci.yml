@@ -30,12 +30,14 @@ jobs:
           node-version: 22
       - name: Derive task id from branch name
         id: task
+        env:
+          BR: ${{ github.head_ref }}
         run: |
-          BR="${{ github.head_ref }}"
           echo "id=$(echo "$BR" | grep -oE '(WD|R2)-[0-9]+(-R2)?' | head -1 || true)" >> "$GITHUB_OUTPUT"
       - name: Run repository gates
         env:
           BASE_REF: origin/${{ github.base_ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/gate.mjs all "${{ steps.task.outputs.id }}"
 
   build:
@@ -56,6 +58,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - run: pnpm build
 
   # WD-024: full matrix — lint/typecheck run in every package where they are
   # configured, and every package's `test` script (unit / contract /
@@ -133,7 +136,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Scan changed lines for credential patterns
-        run: |
-          BASE="origin/${{ github.base_ref }}"
-          git diff "$BASE...HEAD" +U | grep -nE "(AKIA[0-9A-Z]{16}|BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY|xox[baprs]-[0-9-Za-z]{10,}|AIza[0-9A-Za-z_-]{35})" \
-            && { echo "secret-like pattern found"; exit 1; } || echo "clean"
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+        run: node scripts/scan-secrets.mjs

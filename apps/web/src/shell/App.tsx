@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -67,51 +67,42 @@ function clockMT(): string {
  * the synthetic-data banner (fixture seed visible) stays on every view.
  */
 export function App() {
+  // Restore before the map mounts: applying the URL in an effect is too late
+  // for MapLibre's constructor-only initial camera.
+  const [initialView] = useState(() => {
+    const parsed = parseViewState(typeof location === 'undefined' ? '' : location.search);
+    const initialPersona = personaById(defaultPersonaId);
+    const permitted = projectCatalog(viewerFor(initialPersona)).map((station) => station.id);
+    const applied = applyViewState(parsed ?? defaultViewState, permitted);
+    if (applied.state.view === 'stewardship' && initialPersona.role !== 'steward') {
+      return { ...applied, state: { ...applied.state, view: 'overview' as const } };
+    }
+    return applied;
+  });
   const [personaId, setPersonaId] = useState(defaultPersonaId);
-  const [view, setView] = useState<ShellView>(defaultViewState.view);
-  const [stationId, setStationId] = useState<string | null>(defaultViewState.stationId);
-  const [systemId, setSystemId] = useState(defaultViewState.systemId);
-  const [siteTypeId, setSiteTypeId] = useState(defaultViewState.siteTypeId);
-  const [telemetry, setTelemetry] = useState<TelemetryFilter>(defaultViewState.telemetry);
+  const [view, setView] = useState<ShellView>(initialView.state.view);
+  const [stationId, setStationId] = useState<string | null>(initialView.state.stationId);
+  const [systemId, setSystemId] = useState(initialView.state.systemId);
+  const [siteTypeId, setSiteTypeId] = useState(initialView.state.siteTypeId);
+  const [telemetry, setTelemetry] = useState<TelemetryFilter>(initialView.state.telemetry);
   const [search, setSearch] = useState('');
-  const [days, setDays] = useState<ChartWindow>(defaultViewState.days);
-  const [basemap, setBasemap] = useState<BasemapKind>(defaultViewState.basemap);
-  const [camera, setCamera] = useState<MapCamera>(defaultViewState.map);
+  const [days, setDays] = useState<ChartWindow>(initialView.state.days);
+  const [basemap, setBasemap] = useState<BasemapKind>(initialView.state.basemap);
+  const [camera, setCamera] = useState<MapCamera>(initialView.state.map);
   const [tab, setTab] = useState<DetailTab>('observations');
   const [display, setDisplay] = useState<'chart' | 'table'>('chart');
   const [emphasis, setEmphasis] = useState<'best' | 'raw'>('best');
   const [pointIndex, setPointIndex] = useState<number | null>(null);
-  const [deniedStationId, setDeniedStationId] = useState<string | null>(null);
-  const urlSynced = useRef(false);
+  const [deniedStationId, setDeniedStationId] = useState<string | null>(initialView.deniedStationId);
 
   const persona = personaById(personaId);
-  const viewer = viewerFor(persona);
+  // Camera updates must not rebuild the catalog and trigger another auto-fit.
+  const viewer = useMemo(() => viewerFor(persona), [persona]);
   const catalog = useMemo(() => projectCatalog(viewer), [viewer]);
-
-  // Restore a shared URL (FR-008): non-sensitive view state only; the persona
-  // never travels in the link, and an inaccessible station is omitted with a
-  // clear message instead of silently kept.
-  useEffect(() => {
-    const parsed = parseViewState(typeof location === 'undefined' ? '' : location.search);
-    if (parsed) {
-      const applied = applyViewState(parsed, catalog.map((station) => station.id));
-      setView(applied.state.view);
-      setStationId(applied.state.stationId);
-      setSystemId(applied.state.systemId);
-      setSiteTypeId(applied.state.siteTypeId);
-      setTelemetry(applied.state.telemetry);
-      setDays(applied.state.days);
-      setBasemap(applied.state.basemap);
-      setCamera(applied.state.map);
-      setDeniedStationId(applied.deniedStationId);
-    }
-    urlSynced.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Serialize every view-state change back to the URL (versioned, canonical).
   useEffect(() => {
-    if (!urlSynced.current || typeof history === 'undefined') return;
+    if (typeof history === 'undefined') return;
     const query = serializeViewState({ view, stationId, systemId, siteTypeId, telemetry, days, basemap, map: camera });
     history.replaceState(null, '', query === '' ? location.pathname : `${location.pathname}?${query}`);
   }, [view, stationId, systemId, siteTypeId, telemetry, days, basemap, camera]);

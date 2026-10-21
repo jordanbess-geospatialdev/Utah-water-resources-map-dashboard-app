@@ -344,6 +344,12 @@ interface ValidityVerdict {
  */
 function isWithinValidity(assignment: Assignment, t: number): ValidityVerdict {
   if (assignment.status === 'revoked') return { valid: false, reason: 'DENY_ASSIGNMENT_REVOKED' };
+  const effectiveAt = Date.parse(assignment.effectiveAt);
+  const expiresAt = assignment.expiresAt === null ? null : Date.parse(assignment.expiresAt);
+  if (!Number.isFinite(t) || !Number.isFinite(effectiveAt) ||
+      (expiresAt !== null && (!Number.isFinite(expiresAt) || expiresAt <= effectiveAt))) {
+    return { valid: false, reason: 'DENY_INVALID_ASSIGNMENT' };
+  }
   if (assignment.role === 'deputy') {
     if (!assignment.delegation) return { valid: false, reason: 'DENY_INVALID_ASSIGNMENT' };
     if (assignment.scope.kind === 'statewide') return { valid: false, reason: 'DENY_INVALID_ASSIGNMENT' };
@@ -353,11 +359,16 @@ function isWithinValidity(assignment: Assignment, t: number): ValidityVerdict {
   // check it before the generic assignment window so boundary denials name
   // the delegation (the audited object) rather than the carrying grant.
   if (assignment.delegation) {
-    if (Date.parse(assignment.delegation.effectiveAt) > t) return { valid: false, reason: 'DENY_DELEGATION_NOT_EFFECTIVE' };
-    if (t >= Date.parse(assignment.delegation.expiresAt)) return { valid: false, reason: 'DENY_DELEGATION_EXPIRED' };
+    const delegatedAt = Date.parse(assignment.delegation.effectiveAt);
+    const delegatedUntil = Date.parse(assignment.delegation.expiresAt);
+    if (!Number.isFinite(delegatedAt) || !Number.isFinite(delegatedUntil) || delegatedUntil <= delegatedAt) {
+      return { valid: false, reason: 'DENY_INVALID_ASSIGNMENT' };
+    }
+    if (delegatedAt > t) return { valid: false, reason: 'DENY_DELEGATION_NOT_EFFECTIVE' };
+    if (t >= delegatedUntil) return { valid: false, reason: 'DENY_DELEGATION_EXPIRED' };
   }
-  if (Date.parse(assignment.effectiveAt) > t) return { valid: false, reason: 'DENY_ASSIGNMENT_NOT_EFFECTIVE' };
-  if (assignment.expiresAt !== null && t >= Date.parse(assignment.expiresAt)) return { valid: false, reason: 'DENY_ASSIGNMENT_EXPIRED' };
+  if (effectiveAt > t) return { valid: false, reason: 'DENY_ASSIGNMENT_NOT_EFFECTIVE' };
+  if (expiresAt !== null && t >= expiresAt) return { valid: false, reason: 'DENY_ASSIGNMENT_EXPIRED' };
   return { valid: true, reason: null };
 }
 

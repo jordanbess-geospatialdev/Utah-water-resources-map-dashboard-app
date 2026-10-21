@@ -2,10 +2,16 @@
 
 Programmatic access for researchers and scripts (FR-065: documented and
 bounded programmatic queries; FR-063: exports). Everything here runs against
-the documented `/api/v1` contract in [`packages/contracts/openapi.json`](../packages/contracts/openapi.json);
+the documented `/api/v1` contract in [`packages/contracts/openapi.json`](../../packages/contracts/openapi.json);
 the example payloads under [`examples/`](examples/) are generated from the
 frozen fixture world (`fixtures/contracts`, seed `utah-water-fixture-v1`,
 public streams only) and match the contract schemas field for field.
+
+**Integration status:** these are contract examples, not a deployed endpoint.
+`services/api` currently supplies domain functions and fixture tests; the HTTP
+transport, persistent stores and staging identity connection still need to be
+wired and verified. The hostname below is a placeholder. Replace it only with
+an approved environment after those integrations pass acceptance.
 
 Credential policy, lifetimes, rotation and logging rules live in
 [TOKEN-POLICY.md](TOKEN-POLICY.md). Summary: a token is scoped, expiring and
@@ -91,7 +97,7 @@ Full revision chains (who corrected what, when, why) live behind
 ## Create an export job
 
 Large selections are queued, never silently truncated
-([FR-063](../docs/product/baseline/01-product-requirements.md)). The job
+([FR-063](../product/baseline/01-product-requirements.md)). The job
 re-authorizes on every download; a download link is proxied and expiring.
 
 ```bash
@@ -137,7 +143,7 @@ human-readable). Examples: [`examples/error-responses.json`](examples/error-resp
 
 Per-token fixed window, INDEPENDENT of any interactive session budget
 (proposed defaults, owner-ratifiable - see
-[TOKEN-POLICY.md](TOKEN-POLICY.md#rate-limits)): **120 requests per rolling
+[TOKEN-POLICY.md](TOKEN-POLICY.md#rate-limits-proposed)): **120 requests per fixed
 60 seconds** per token. Exceeding it returns `429` with `retryAfterSeconds`;
 the window resets on its own - no unlock call. Batch work should page at a
 modest pace or use export jobs instead of tight observation loops.

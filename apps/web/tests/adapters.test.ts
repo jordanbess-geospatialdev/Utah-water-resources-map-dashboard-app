@@ -98,6 +98,16 @@ test('GeoLibre layers are complete, stable and carry fixture provenance', () => 
   assert.ok(withoutSelection.every((layer) => layer.id !== 'station-selected'));
 });
 
+test('a fresh flagged station uses the attention layer promised by the legend', () => {
+  const catalog = projection.projectCatalog(personasModule.viewerFor(personasModule.personaById('donna')));
+  const station = catalog.find((entry) => entry.latest !== null)!;
+  const flagged = { ...station, status: 'active' as const, freshness: 'current' as const, latest: { ...station.latest!, flags: ['out-of-range' as const] } };
+  assert.equal(layers.stationLayerClass(flagged), 'attention');
+  const built = layers.buildStationLayers([flagged], null);
+  assert.equal(built.find((layer) => layer.id === 'stations-current')!.geojson!.features.length, 0);
+  assert.equal(built.find((layer) => layer.id === 'stations-attention')!.geojson!.features[0]!.properties?.stationId, flagged.id);
+});
+
 test('restricted fields never enter map feature properties, even for entitled viewers', () => {
   const fatimaViewer = { personaId: 'fatima', role: 'engineer' as const, principalId: 'principal-fatima-engineer', organizationId: null };
   const catalog = projection.projectCatalog(fatimaViewer);

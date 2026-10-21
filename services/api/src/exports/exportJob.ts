@@ -13,7 +13,7 @@
  * - BOUNDS: the requested window must satisfy the series window cap and the
  *   estimated row count must fit MAX_EXPORT_ROWS (checked at creation with a
  *   typed rejection, so nothing is "silently truncated" - FR-063); a running
- *   job is failed by tick() once it exceeds JOB_TIME_CAP_MS.
+ *   job is failed by tick() or complete() once it exceeds JOB_TIME_CAP_MS.
  * - THE SAME GRANT GATE AS CHART APIS: creation, execution (complete) and
  *   every download re-run grantCheck.readStreamsGrant. A grant revoked after
  *   the artifact exists fails the job CLOSED on the next download: the job
@@ -22,8 +22,8 @@
  * - DOWNLOADS EXPIRE: the manifest carries expiresAt; a later download is a
  *   typed 410 and must be re-requested.
  * - REAUTHORIZATION-ON-DOWNLOAD HOOK (for the future HTTP layer): GET
- *   /api/v1/exports/{id} must call ExportJobManager.download(jobId, actor,
- *   now) - never a presigned storage URL - so the per-download grant check
+ *   /api/v1/exports/{id} must call ExportJobManager.download(jobId, actor)
+ *   with the manager's injected clock - never a presigned storage URL - so the per-download grant check
  *   above cannot be bypassed. Artifacts for private records are served with
  *   Cache-Control: private, no-store by the transport.
  * - Determinism: job ids are sequence-derived and the clock is injected, so
@@ -182,14 +182,7 @@ export class ExportJobManager {
   tick(jobId: string): ExportJobResult<ExportJob> {
     const job = this.jobs.find((entry) => entry.id === jobId);
     if (!job) return denial(404, 'NOT_FOUND', `export job "${jobId}" not found`);
-    if (job.status === 'running' && job.startedAt !== null) {
-      const elapsed = Date.parse(this.now()) - Date.parse(job.startedAt);
-      if (elapsed > EXPORT_LIMITS.jobTimeCapMs) {
-        job.status = 'failed';
-        job.completedAt = this.now();
-        job.failure = { code: 'EXPORT_TIME_CAP_EXCEEDED', message: `job exceeded ${EXPORT_LIMITS.jobTimeCapMs} ms`, status: 500 };
-      }
-    }
+    if (job.status === 'running') this.enforceTimeCap(job, this.now());
     return { outcome: 'allowed', value: { ...job } };
   }
 
@@ -203,7 +196,10 @@ export class ExportJobManager {
     if (job.status !== 'running') {
       return denial(409, 'INVALID_STATE', `job "${jobId}" is ${job.status}, only running jobs complete`);
     }
-    const grants = readStreamsGrant(this.store, job.requestedBy, job.request.streamIds, this.now());
+    const now = this.now();
+    const expired = this.enforceTimeCap(job, now);
+    if (expired) return expired;
+    const grants = readStreamsGrant(this.store, job.requestedBy, job.request.streamIds, now);
     if (grants.outcome === 'denied') {
       return this.failClosed(job, grants);
     }
@@ -253,6 +249,8 @@ export class ExportJobManager {
       }),
     );
     const completedAt = this.now();
+    const elapsed = this.enforceTimeCap(job, completedAt);
+    if (elapsed) return elapsed;
     this.artifacts.set(jobId, rendered);
     job.status = 'succeeded';
     job.completedAt = completedAt;
@@ -290,15 +288,30 @@ export class ExportJobManager {
     if (Date.parse(this.now()) >= Date.parse(job.manifest.expiresAt)) {
       return denial(410, 'DOWNLOAD_EXPIRED', 'the export manifest expired; request the export again');
     }
-    const grants = readStreamsGrant(this.store, actorId, job.request.streamIds, this.now());
+    // A requester losing authority invalidates its artifact. A different
+    // caller's denial must not delete a still-authorized requester's job.
+    const grants = readStreamsGrant(this.store, job.requestedBy, job.request.streamIds, this.now());
     if (grants.outcome === 'denied') {
       return this.failClosed(job, grants);
+    }
+    if (actorId !== job.requestedBy) {
+      const callerGrants = readStreamsGrant(this.store, actorId, job.request.streamIds, this.now());
+      if (callerGrants.outcome === 'denied') return callerGrants;
     }
     const artifact = this.artifacts.get(jobId);
     if (!artifact) {
       return denial(500, 'ARTIFACT_MISSING', 'succeeded job has no artifact');
     }
     return { outcome: 'allowed', value: { csv: artifact.csv, manifest: { ...job.manifest } } };
+  }
+
+  private enforceTimeCap(job: ExportJob, now: string): ExportJobResult<never> | null {
+    if (job.startedAt === null || Date.parse(now) - Date.parse(job.startedAt) <= EXPORT_LIMITS.jobTimeCapMs) return null;
+    job.status = 'failed';
+    job.completedAt = now;
+    job.failure = { code: 'EXPORT_TIME_CAP_EXCEEDED', message: `job exceeded ${EXPORT_LIMITS.jobTimeCapMs} ms`, status: 500 };
+    this.artifacts.delete(job.id);
+    return denial(job.failure.status, job.failure.code, job.failure.message);
   }
 
   private failClosed(job: ExportJob, grants: ReadDenial): ExportJobResult<never> {

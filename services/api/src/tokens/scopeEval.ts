@@ -103,12 +103,23 @@ export function scopeCoversQuery(scopes: TokenScopes, query: ScopedQuery): Scope
     };
   }
   const range = scopes.dateRange ?? null;
+  const start = query.start === undefined ? undefined : Date.parse(query.start);
+  const end = query.end === undefined ? undefined : Date.parse(query.end);
+  if ((start !== undefined && !Number.isFinite(start)) || (end !== undefined && !Number.isFinite(end)) ||
+      (start !== undefined && end !== undefined && start >= end)) {
+    return { covered: false, reason: 'DATE_RANGE_NOT_IN_SCOPE', detail: 'query dates must form a valid, increasing observation-time window' };
+  }
   if (range) {
-    if (query.start !== undefined && Date.parse(query.start) < Date.parse(range.start)) {
-      return { covered: false, reason: 'DATE_RANGE_NOT_IN_SCOPE', detail: `requested start precedes the token's window (${range.start})` };
+    const rangeStart = Date.parse(range.start);
+    const rangeEnd = Date.parse(range.end);
+    if (!Number.isFinite(rangeStart) || !Number.isFinite(rangeEnd) || rangeStart >= rangeEnd) {
+      return { covered: false, reason: 'DATE_RANGE_NOT_IN_SCOPE', detail: 'token date range is invalid' };
     }
-    if (query.end !== undefined && Date.parse(query.end) > Date.parse(range.end)) {
-      return { covered: false, reason: 'DATE_RANGE_NOT_IN_SCOPE', detail: `requested end exceeds the token's window (${range.end})` };
+    if (start !== undefined && (start < rangeStart || start >= rangeEnd)) {
+      return { covered: false, reason: 'DATE_RANGE_NOT_IN_SCOPE', detail: `requested start is outside the token's window [${range.start}, ${range.end})` };
+    }
+    if (end !== undefined && (end > rangeEnd || end <= rangeStart)) {
+      return { covered: false, reason: 'DATE_RANGE_NOT_IN_SCOPE', detail: `requested end is outside the token's window (${range.start}, ${range.end}]` };
     }
   }
   return { covered: true, reason: 'COVERED' };
@@ -171,6 +182,16 @@ export function authorizeScoped(
 ): ScopedDecision {
   if (!tokenAllowsAction(token.scopes, action)) {
     return scopedDeny(token, action, 'ACTION_NOT_IN_SCOPE', null);
+  }
+  // Bind stream scopes to the actual policy target. Query coordinates alone
+  // are insufficient: an omitted or conflicting streamId must not authorize
+  // a different datastream through the public-read branch.
+  if (object.kind === 'datastream') {
+    const targetCover = scopeCoversQuery(token.scopes, { streamId: object.id });
+    if (!targetCover.covered) return scopedDeny(token, action, targetCover.reason, null);
+    if (query.streamId !== undefined && query.streamId !== object.id) {
+      return scopedDeny(token, action, 'STREAM_NOT_IN_SCOPE', null);
+    }
   }
   const cover = scopeCoversQuery(token.scopes, query);
   if (!cover.covered) {

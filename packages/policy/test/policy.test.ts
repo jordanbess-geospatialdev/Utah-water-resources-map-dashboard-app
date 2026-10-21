@@ -195,6 +195,19 @@ const req = (
 const decide = (principal: Principal | null, action: Capability | string, objectId: string, fields?: readonly FieldClass[], destinationSystemId?: string, w = world, now = NOW): Decision =>
   evaluate(req(principal, action, objectId, fields, destinationSystemId), w, now);
 
+test('malformed grant and delegation dates never confer authority', () => {
+  for (const patch of [{ effectiveAt: 'invalid' }, { expiresAt: 'invalid' }]) {
+    const malformed = withEntitlement(world, 'ent-commissioner-cody', patch);
+    assert.equal(decide(ACTORS.cody, 'enter-readings', 'str-hyrum-q-owner', undefined, undefined, malformed).reason, 'DENY_INVALID_ASSIGNMENT');
+    assert.deepEqual(capabilitiesOf(malformed, ACTORS.cody!.id, NOW), []);
+  }
+  const delegation = world.assignments.find((assignment) => assignment.id === 'ent-deputy-ana')!.delegation!;
+  for (const patch of [{ effectiveAt: 'invalid' }, { expiresAt: 'invalid' }]) {
+    const malformed = withEntitlement(world, 'ent-deputy-ana', { delegation: { ...delegation, ...patch } });
+    assert.equal(decide(ACTORS.ana, 'enter-readings', 'str-hyrum-q-owner', undefined, undefined, malformed).reason, 'DENY_INVALID_ASSIGNMENT');
+  }
+});
+
 // ---------------------------------------------------------------------------
 // T-02 core: the deterministic role x action x scope grid
 // ---------------------------------------------------------------------------

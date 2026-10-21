@@ -25,4 +25,4 @@ S1 supplies user needs; it does not approve a final permissions policy or databa
 
 ## Location of source artifacts
 
-The source PDFs (S1, S2, and the 2024 technology modernization roadmap) live outside this repository in the delivery workspace; they are not committed to the monorepo. The `docs/product/baseline/` snapshot captures the derived specification documents only.
+The source PDFs (S1, S2, and the 2024 technology modernization roadmap) were consolidated into [`docs/delivery/sources/`](../delivery/sources/) on 21 October 2026. The [`delivery package register`](../delivery/README.md) records that consolidation. The `docs/product/baseline/` snapshot captures the derived specification documents; it does not replace the source PDFs.

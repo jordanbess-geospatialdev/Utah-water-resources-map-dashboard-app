@@ -22,6 +22,14 @@ matrix" T-01..T-16, "Test data", "Commands and CI gates").
 - **DEFECT-Q4 RESOLVED** — delivery backlog statuses re-synchronized (Q4 evidence updated 2026-10-21).
 - Re-run after fixes: full qualification sweep Verdict PASS, exit 0, deterministic.
 
+The environment and counts below describe the original qualification run.
+The later [repository review](2026-10-21-repository-review.md) records additional
+fixes and current test counts. For T-05, the living
+[known-server behavior record](../../infra/neoserver/qualification/KNOWN-SERVER-BEHAVIOR.md)
+supersedes the historical "open D5" wording below: the gateway accepts MVT v1
+and v2, and deterministic feature IDs address D7. The original capture remains
+unchanged; actual deployment qualification and owner acceptance remain pending.
+
 ## 1. Environment record
 
 | Item | Value |
@@ -109,14 +117,19 @@ live-capture integrity), T-06, T-07, T-08 (synthetic + sweep), T-10
 | T-14 operations drills | EXECUTED 2026-10-21 (recorded); re-run BLOCKED | Single-writer lock, restart, quiesced backup/restore drills are recorded in `infra/neoserver/qualification/recorded/`; re-run needs the stack. |
 | T-09 offline sync / R2 acceptance / Discovery | OUT OF MVP SCOPE | Planned and unimplemented, **not required for the MVP gate** (R2 = WD-026, Discovery = WD-023). |
 
-## 4. Defects found (filed, not fixed — no implementation writes in this scope)
+## 4. Historical findings and subsequent resolution
+
+The independent qualification pass filed these findings without changing
+implementation code. Later commits resolved Q1–Q4 as recorded above. The table
+preserves the original evidence; the current tripwires assert the corrected
+behavior, rather than requiring the original defects to remain present.
 
 | # | Severity | Location | Finding |
 | --- | --- | --- | --- |
-| DEFECT-Q1 | Low | `services/api/src/summaries/indicators.ts` (mirrored in `apps/web/src/features/overview/derivation.ts`) | Public statewide indicators embed exclusion ID lists that disclose the identifier and status of `sta-ogden-valley-proposed` — a restricted-visibility, unpublished station whose existence the hidden-object rule says not to reveal. No restricted VALUES leak. Pinned by `restricted-bytes.test.mjs` ("DEFECT-Q1 pinned"); the pin fails when fixed, forcing this report to be updated. |
-| DEFECT-Q2 | Low–Medium | `services/api/src/summaries/totals.ts` (`fixtureAreaTotals`, default public visibility) | The default-PUBLIC area totals enumerate per-stream breakdown rows for EVERY fixture stream, including the restricted owner stream, the internal diagnostic stream and the restricted proposed gauge (ids, display names, properties, exclusion reasons) — an inventory disclosure of hidden objects to anonymous callers. No restricted VALUES leak; counts alone would be defensible. Pinned by `restricted-bytes.test.mjs` ("DEFECT-Q2" pin set). |
-| DEFECT-Q3 | Low | `packages/policy/src/matrix.ts` | `CAPABILITY_SATISFIES['field-visits']` includes `statewide-administration`, but `ROLE_CEILING.steward` does not list `field-visits` — violating the file's own rule that a satisfaction entry may never exceed the matrix ceiling for the carrying role. Effect: the fixture steward grant authorizes field visits today. No cross-persona escalation. Pinned by `policy-fuzz.test.mjs` ("DEFECT-Q3 pinned"). |
-| DEFECT-Q4 | Informational | `docs/delivery/specifications/backlog.json` | Delivery-copy task statuses are stale relative to the authoritative root `tasks.json` (WD-013 completed/in_progress, WD-015 completed/planned, WD-025 completed/planned). Documentation drift only; the T-01 gate reports it as a note. |
+| DEFECT-Q1 — fixed | Low | `services/api/src/summaries/indicators.ts` (mirrored in `apps/web/src/features/overview/derivation.ts`) | The original public indicators disclosed hidden-object identifiers in exclusion lists. They now expose anonymous exclusion classes and counts; `restricted-bytes.test.mjs` requires hidden identifiers to remain absent. |
+| DEFECT-Q2 — fixed | Low–Medium | `services/api/src/summaries/totals.ts` (`fixtureAreaTotals`, default public visibility) | The original default-public totals enumerated restricted/internal stream metadata. The visibility wall now omits those rows while retaining anonymous omission counts; `restricted-bytes.test.mjs` asserts the fixed behavior. |
+| DEFECT-Q3 — fixed | Low | `packages/policy/src/matrix.ts` | The original field-visits satisfaction rule did not match the steward role ceiling. The steward-family role gate and capability invariant tests now enforce the approved relationship (POLICY_VERSION 0.1.1). |
+| DEFECT-Q4 — original drift resolved | Informational | `docs/delivery/specifications/backlog.json` | WD-013/015/025 statuses were synchronized after qualification. The delivery backlog is a planning/evidence snapshot; consult root `tasks.json` for current execution status. Later R2 status differences are not proof of completed R2 acceptance. |
 | Pre-existing (re-verified, owners already assigned by T-05) | — | `infra/neoserver/qualification/recorded/CAPTURE-REPORT.md` | D5 MVT layer version 1 (open with spatial_integration/DR-009), D6 upstream `PUT layer` drops `sql_view`, D7 non-deterministic tile bytes from `row_number()` ids, D9 MSYS path mangling caveat. Not re-opened here; recorded evidence integrity re-verified. |
 
 No high-severity security or data-integrity defect was found: gate codes,
@@ -142,9 +155,16 @@ single-store deployment requires one active writer. T-08 and T-14 therefore
 block production acceptance even when the UI appears correct."), T-08's
 live-cache cycle and T-14's drills are production-blocking even though their
 recorded evidence is green. DEFECT-Q1/Q2 (hidden-object naming in public
-summaries) and DEFECT-Q3 (steward ceiling inconsistency) need an owner
-decision; none is high-severity, so they do not block the MVP gate on
-fixture evidence.
+summaries) and DEFECT-Q3 (steward ceiling inconsistency) are resolved and
+covered by regression checks. Their resolution does not waive any remaining
+integration, owner-acceptance or staging gate.
+
+The web suite exercises modules and models. `apps/web/src/shell/App.tsx`
+currently renders the fixture shell without mounting the standalone feature
+panels; passing those tests therefore does not prove that users can reach or
+complete the documented workflows. Mount the panels, connect the domain API
+through authenticated HTTP and persistent storage, and then execute the
+persona browser/UAT scenarios before asserting MVP acceptance.
 
 R2 acceptance and Discovery remain planned and unimplemented, and are not
 required for this gate.

@@ -2,8 +2,11 @@
 
 Prepared 2026-10-21 | Machine qualification: PASSED (fixture evidence) | Human acceptance: **PENDING — named owners below**
 
-Personas execute the task scripts in `jira_stories.md` §4 (per-persona UAT
-scripts) against the staging environment once provisioned; facilitators record
+Personas execute the [public task checklist](../training/tasks-public.md) and
+[operational task checklist](../training/tasks-operational.md), following the
+[training plan](../training/README.md), against the staging environment once
+the feature panels, HTTP API, persistence and identity are integrated.
+Facilitators record
 task completion, timing and defects. The commissioner pilot criterion from the
 requirements: at least 60% of a representative commissioner cohort completes the
 core tasks unaided (cohort size and baseline times agreed with the product owner
@@ -34,8 +37,10 @@ agents; each owner signs only after reviewing the evidence cited in their row.
 
 1. A PENDING row with a BLOCKED evidence citation cannot be signed; unblock the
    environment first (staging identity, database, browser access).
-2. Defects found in UAT are filed against the Jira program (jira_stories.md)
-   with severity; the qualification tripwires must remain green during fixes.
+2. Defects found in UAT are filed in the team's agreed issue tracker with
+   severity, requirement ID, checklist step, reproduction and a named owner;
+   the qualification tripwires must remain green during fixes. This repository
+   does not contain a `jira_stories.md` program or a configured Jira project.
 3. Deferred R2/Discovery items (release notes) do not block any row above.
 4. This record, once fully signed, authorizes production change request — it is
    not itself the deployment approval.

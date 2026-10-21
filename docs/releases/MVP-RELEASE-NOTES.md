@@ -4,9 +4,17 @@ Release: MVP (fixture-proven) | Prepared 2026-10-21 | State: machine qualificati
 
 ## What is included
 
-All 68 functional requirements have implemented MVP-scope coverage across 21 merged
-delivery tasks (evidence chain in every merge commit; summary in
-`docs/verification/MVP-QUALIFICATION-REPORT.md`):
+The baseline assigns **51 functional requirements and 10 nonfunctional
+requirements to MVP**, 15 functional requirements to R2, and two to Discovery
+([traceability register](../traceability/requirements-traceability.csv)). Merged
+delivery tasks provide fixture-tested modules for the MVP scope. Task completion
+and unit tests do not establish integrated acceptance: the application shell
+still needs the feature modules mounted, and the API needs an HTTP transport,
+persistent stores and real identity integration. See the
+[qualification report](../verification/MVP-QUALIFICATION-REPORT.md) and
+[repository review](../verification/2026-10-21-repository-review.md).
+
+Implemented module areas include:
 
 - **Public experience (FR-001..010, FR-052, FR-058..066):** six-persona GeoLibre/
   MapLibre application, controlled metadata filters with unknown-vs-absent
@@ -44,20 +52,26 @@ fixed, and are now pinned by regression tripwires asserting the fixed state.
    staging load tests, and the T-08/T-14 operational drills are recorded BLOCKED
    with exact reasons in the qualification report and remain production gates.
 2. **Simulated channels.** Notification delivery, ingestion transport, and
-   analytics collection are simulated interfaces; no real messages or network
-   calls occur in tests or code.
+   analytics collection are simulated interfaces. Those adapters do not deliver
+   production messages or ingest live provider data.
 3. **Pending owner decisions.** Golden values (measurement owner), permission
    matrix ratification, DR-009 database inventory, analytics privacy decisions
    D-1..D-6, and identity provider integration (DR-011).
+4. **Application integration remains incomplete.** The runnable web entry point
+   renders the fixture shell in `apps/web/src/shell/App.tsx`; the standalone
+   feature panels are not yet mounted there. Domain APIs have no HTTP server or
+   persistent backing store. Training steps and API examples describe target
+   workflows and cannot yet serve as proof that users can complete them.
 
 ## Deferred to R2 / Discovery (explicitly NOT in this release, non-blocking)
 
-- R2: durable offline capture/sync (WD-017 family), supplier/water-use reporting
-  (WD-012-R2..WD-025-R2), rating-curve governance, historical as-of
-  reconstruction, finalized-accounting immutability, decision snapshots,
-  asset transfers, voice notes.
+- R2: supplier/water-use reporting (WD-017), rating curves and shifts
+  (WD-011-R2), durable offline capture/sync and asset transfers (WD-012-R2),
+  recurring quality trends (WD-013-R2), historical as-of reconstruction,
+  voice notes and WCAT integration (WD-023-R2; FR-044/047/051), and decision
+  snapshots, finalized reports and flexible accounting periods (WD-025-R2).
 - Discovery: advanced field configuration (FR-050), extended modeling/rights
-  transparency (FR-067), WCAT integration scope (WD-023).
+  transparency (FR-067), scoped through WD-023.
 
 ## Production authorization requirements
 

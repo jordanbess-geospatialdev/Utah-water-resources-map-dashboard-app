@@ -3,7 +3,7 @@
 Request/response pairs for the documented researcher API, generated from the
 frozen fixture world (`fixtures/contracts`, seed `utah-water-fixture-v1`,
 public streams only) and matching the schemas in
-[`packages/contracts/openapi.json`](../../packages/contracts/openapi.json)
+[`packages/contracts/openapi.json`](../../../packages/contracts/openapi.json)
 (`ApiTokenCreateRequest`/`ApiTokenIssued`, `SitePage`, `ObservationPage`,
 `ExportCreateRequest`/`AsyncJob`, `Problem`).
 
