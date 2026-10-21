@@ -1,0 +1,10 @@
+{
+  "name": "@utah-water/integrations-r2",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "R2 extension integrations (WD-023-R2): FR-044 as-of reconstruction, FR-047 voice-note drafts, FR-051 WCAT adapter seam. Pure TypeScript, zero dependencies, zero network (statically scanned). Not a pnpm workspace member (services/* is one level); run the suites directly.",
+  "scripts": {
+    "test": "node --test --experimental-strip-types asof/test/*.test.ts voice/test/*.test.ts wcat/test/*.test.ts"
+  }
+}
