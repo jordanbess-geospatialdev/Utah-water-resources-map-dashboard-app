@@ -292,7 +292,7 @@
         "WD-012"
       ],
       "release": "R2",
-      "status": "planned"
+      "status": "in_progress"
     },
     {
       "id": "WD-018",
@@ -457,7 +457,7 @@
         "WD-011"
       ],
       "release": "R2",
-      "status": "planned"
+      "status": "in_progress"
     },
     {
       "id": "WD-012-R2",
@@ -475,7 +475,7 @@
         "WD-012"
       ],
       "release": "R2",
-      "status": "planned"
+      "status": "in_progress"
     },
     {
       "id": "WD-013-R2",
