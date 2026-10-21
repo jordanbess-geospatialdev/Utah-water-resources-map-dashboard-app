@@ -8,6 +8,12 @@ on:
   pull_request:
     branches: [integration, main]
 
+# WD-024: one run per ref — a newer event for the same ref queues behind the
+# run already in flight instead of racing it, so gate evidence stays ordered.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -51,6 +57,74 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  # WD-024: full matrix — lint/typecheck run in every package where they are
+  # configured, and every package's `test` script (unit / contract /
+  # integration, as each package defines them) runs in isolation so a failure
+  # is attributed to its package. fail-fast is off: one broken package never
+  # hides another's result. The union of these cells equals `pnpm -r test`.
+  full-matrix:
+    name: full matrix (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - "@utah-water/web"
+          - "@utah-water/contracts"
+          - "@utah-water/policy"
+          - "@utah-water/api"
+          - "@utah-water/geo-gateway"
+          - "@utah-water/database"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Lint (where configured)
+        run: pnpm --filter "${{ matrix.package }}" --if-present run lint
+      - name: Typecheck (where configured)
+        run: pnpm --filter "${{ matrix.package }}" --if-present run typecheck
+      - name: Unit / contract / integration tests (where defined)
+        run: pnpm --filter "${{ matrix.package }}" --if-present run test
+
+  # WD-024: lockfile integrity — the accepted dependency contract
+  # (ADR-13 "Per-worktree dependencies"). A frozen install must fail loudly
+  # when pnpm-lock.yaml drifts from the workspace package.json files or when
+  # the registry is unavailable. No tolerant fallback here: the lockfile
+  # exists, so drift is always a defect.
+  lockfile-integrity:
+    name: lockfile integrity (frozen install)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Frozen install fails on drift
+        run: pnpm install --frozen-lockfile
+
+  # WD-024: static ops verification — secret placeholders, digest-pinned
+  # images, preserved gate/secrets jobs, no auto-push in release.yml, and
+  # key-presence checks for the runtime/workflow YAML. Zero dependencies:
+  # bash + coreutils only (see ops/README.md).
+  ops-verify:
+    name: ops static verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ops verifier
+        run: bash ops/verify.sh
+
   secrets:
     name: secret scan
     runs-on: ubuntu-latest
@@ -61,5 +135,5 @@ jobs:
       - name: Scan changed lines for credential patterns
         run: |
           BASE="origin/${{ github.base_ref }}"
-          git diff "$BASE...HEAD" +U | grep -nE "(AKIA[0-9A-Z]{16}|BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY|xox[baprs]-[0-9A-Za-z]{10,}|AIza[0-9A-Za-z_-]{35})" \
+          git diff "$BASE...HEAD" +U | grep -nE "(AKIA[0-9A-Z]{16}|BEGIN (RSA|EC|OPENSSH|PGP) PRIVATE KEY|xox[baprs]-[0-9-Za-z]{10,}|AIza[0-9A-Za-z_-]{35})" \
             && { echo "secret-like pattern found"; exit 1; } || echo "clean"

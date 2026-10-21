@@ -1,0 +1,219 @@
+name: release
+
+# WD-024 release pipeline — MANUAL DISPATCH ONLY. Produces the release
+# provenance (signed-tag instructions + manifest json). It never pushes tags,
+# never creates GitHub releases and never deploys on its own: deployment and
+# live database access stay DISABLED until explicit environment authorization
+# (WD-024 acceptance; docs/product/baseline/04-ai-development-and-testing.md
+# "Human ownership and release decisions"). ops/verify.sh enforces the
+# no-auto-push rule statically, and the deploy job below fails closed.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: "Signed tag to release (vX.Y.Z); must point at integration HEAD"
+        required: true
+        type: string
+      environment:
+        description: "Target environment — every deploy stage stays fail-closed until the platform owner records explicit authorization"
+        required: true
+        type: choice
+        default: staging
+        options:
+          - staging
+          - production
+
+# One release run per tag: re-dispatching the same tag queues behind the
+# run in flight; nothing runs concurrently for the same provenance.
+concurrency:
+  group: release-${{ inputs.version_tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: verify tag matches integration HEAD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate tag format
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.version_tag }}"
+          echo "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "::error::tag '$TAG' is not semver vX.Y.Z"; exit 1; }
+      - name: Fail closed unless the signed tag points at integration HEAD
+        run: |
+          set -euo pipefail
+          TAG="${{ inputs.version_tag }}"
+          git fetch --no-tags origin "+refs/heads/integration:refs/remotes/origin/integration"
+          git fetch --tags --force origin
+          INTEGRATION_SHA="$(git rev-parse refs/remotes/origin/integration)"
+          if ! git rev-parse -q --verify "refs/tags/${TAG}^{commit}" >/dev/null 2>&1; then
+            echo "::error::tag ${TAG} does not exist. An authorized operator must create the signed tag first (see the tag-signing-instructions artifact from a previous run, or ops/runbooks/deploy.md)."
+            exit 1
+          fi
+          TAG_SHA="$(git rev-parse "refs/tags/${TAG}^{commit}")"
+          echo "integration HEAD: ${INTEGRATION_SHA}"
+          echo "tag commit:       ${TAG_SHA}"
+          if [ "${TAG_SHA}" != "${INTEGRATION_SHA}" ]; then
+            echo "::error::tag ${TAG} (${TAG_SHA}) does not match origin/integration HEAD (${INTEGRATION_SHA}). Re-tag after integration lands, or pick the tag that matches."
+            exit 1
+          fi
+          if ! git cat-file tag "${TAG}" >/dev/null 2>&1; then
+            echo "::warning::tag ${TAG} is lightweight, not an annotated/signed tag. Release policy requires signed tags (04-ai-development-and-testing.md 'Branch protection and audit')."
+          fi
+
+  suite:
+    name: full suite + build all artifacts
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version_tag }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (frozen — release builds from the accepted lockfile only)
+        run: pnpm install --frozen-lockfile
+      - name: Static ops verification (placeholders, pins, no auto-push)
+        run: bash ops/verify.sh
+      - name: Lint (where configured)
+        run: pnpm -r --if-present run lint
+      - name: Typecheck (where configured)
+        run: pnpm -r --if-present run typecheck
+      - name: Unit / contract / integration tests (where defined)
+        run: pnpm -r --if-present run test
+      - name: Build all artifacts (where configured)
+        run: pnpm -r --if-present run build
+      - name: Upload build outputs for manifest hashing
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-build-outputs
+          path: |
+            apps/*/dist
+            packages/*/dist
+            services/*/dist
+            database/dist
+          if-no-files-found: warn
+          retention-days: 14
+
+  manifest:
+    name: release manifest + signed-tag instructions
+    needs: suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version_tag }}
+          persist-credentials: false
+      - name: Download build outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: release-build-outputs
+      - name: Compose release-manifest.json
+        run: |
+          set -euo pipefail
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          LOCKFILE_SHA="$(sha256sum pnpm-lock.yaml | awk '{print $1}')"
+          IMAGES_JSON="["
+          sep=""
+          while IFS= read -r img; do
+            [ -n "$img" ] || continue
+            IMAGES_JSON="${IMAGES_JSON}${sep}\"${img}\""
+            sep=", "
+          done < <(grep -oE 'image:[[:space:]]*[^[:space:]]+' infra/neoserver/docker-compose.yml | sed -E 's/^image:[[:space:]]*//' | sort -u)
+          IMAGES_JSON="${IMAGES_JSON}]"
+          ARTIFACTS_JSON="{"
+          sep=""
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            h="$(sha256sum "$f" | awk '{print $1}')"
+            ARTIFACTS_JSON="${ARTIFACTS_JSON}${sep}\"${f}\": \"${h}\""
+            sep=", "
+          done < <(find . -type f -path '*/dist/*' | sed 's|^\./||' | sort)
+          ARTIFACTS_JSON="${ARTIFACTS_JSON}}"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          cat > release-manifest.json <<JSONEOF
+          {
+            "schema": "utah-water-release-manifest/1",
+            "release_tag": "${{ inputs.version_tag }}",
+            "target_environment": "${{ inputs.environment }}",
+            "deployment_authorized": false,
+            "commit": "${COMMIT_SHA}",
+            "lockfile": { "path": "pnpm-lock.yaml", "sha256": "${LOCKFILE_SHA}" },
+            "images": ${IMAGES_JSON},
+            "artifacts": ${ARTIFACTS_JSON},
+            "produced_by": "${RUN_URL}",
+            "notes": "Deployment remains disabled pending explicit environment authorization (WD-024). Image entries are the digest-pinned external images declared in infra/neoserver/docker-compose.yml; application image digests are appended by the authorized deploy procedure."
+          }
+          JSONEOF
+          cat release-manifest.json
+      - name: Emit signed-tag instruction block (OPERATOR-ONLY; this pipeline never pushes)
+        run: |
+          set -euo pipefail
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          cat > tag-signing-instructions.txt <<'EOF'
+          === SIGNED TAG INSTRUCTION — OPERATOR EXECUTION ONLY ===
+          This pipeline does NOT push tags, releases or deployments.
+          The lines below, prefixed with "$ ", are for an authorized
+          operator to run BY HAND after the approving owner records the
+          release decision (docs/product/baseline/04-ai-development-and-testing.md
+          "Human ownership and release decisions"). Prefix "$ " marks
+          operator prompts so ops/verify.sh can prove CI never executes them.
+
+          1. Confirm approval: scope + data policy, pinned dependencies/images,
+            critical-path and negative tests, no unresolved high-severity
+            defects, accessibility review, rehearsed backup/restore and
+            rollback, named on-call owners (release checklist).
+          2. Verify the tag candidate matches the manifest commit:
+          $   git fetch origin && git rev-parse origin/integration
+
+          $ COMMIT=<manifest-commit-sha>
+          $ git tag -s ${{ inputs.version_tag }} -m "Release ${{ inputs.version_tag }} from $COMMIT" "$COMMIT"
+          $ git push origin ${{ inputs.version_tag }}
+
+          3. Record the tag, manifest sha256, approving owner and ticket in the
+          release evidence (docs/releases/**), then dispatch this workflow
+          again so preflight can verify the signed tag.
+          EOF
+          cat tag-signing-instructions.txt
+      - name: Upload release provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-provenance-${{ inputs.version_tag }}
+          path: |
+            release-manifest.json
+            tag-signing-instructions.txt
+          retention-days: 90
+
+  deploy:
+    name: deploy — fail-closed stub
+    needs: [preflight, suite, manifest]
+    runs-on: ubuntu-latest
+    # Renders the run under the requested environment for auditability; the
+    # environment has NO automatic reviewers — the gate below is the control.
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Deployment requires explicit environment authorization
+        run: |
+          echo "::error::requires explicit environment authorization"
+          echo "WD-024 acceptance: deployment and live database access stay disabled"
+          echo "until the platform owner records explicit authorization for"
+          echo "'${{ inputs.environment }}'. Until then this job intentionally fails"
+          echo "closed and this run's red X is the expected state."
+          echo "Pre-authorization checklist: infra/runtime/README.md"
+          echo "Runbook (when authorized):   ops/runbooks/deploy.md"
+          exit 1

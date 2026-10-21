@@ -1,0 +1,128 @@
+# =============================================================================
+# WD-024 runtime definition — water domain backend + spatial gateway service
+#
+# TARGET SHAPE (authored; NOT applied). No deployment and no live database
+# access is authorized yet: see infra/runtime/README.md for the qualification
+# checklist that must be complete before any `apply` of this file. The field
+# names follow Cloud Run (the "Backend and stateless gateway" row of the
+# Google Cloud deployment table in
+# docs/product/baseline/03-architecture.md) but the file is a plain YAML
+# template with no provider lock-in: any approved container platform must
+# honor the same caps before it may host this service.
+#
+# SECRETS: every secret-valued field below is a PLACEHOLDER REFERENCE
+# (${SECRET_REF:<logical-name>}). The literal value lives only in the approved
+# secret manager. ops/verify.sh fails CI if a literal ever appears here.
+#
+# IMAGES: application images are resolved at release time from the release
+# manifest produced by .github/workflows/release.yml (commit SHA + digest);
+# a mutable tag must never be substituted (NFR-008 pinning).
+#
+# QUEUE/POOL CAPS: the numeric values are INITIAL PROPOSALS tied to the
+# "Operational targets and budget" open decision in 03-architecture.md; they
+# bound queues and pools now (fail closed on overrun) and are re-ratified
+# with the load dataset before contractual use. Rendering/latency budgets
+# trace to 02-technical-specification.md "Proposed service targets".
+# =============================================================================
+apiVersion: utah-water.runtime/v1
+kind: Service
+metadata:
+  name: utah-water-backend
+  description: >-
+    Water domain backend (sessions, entitlements, workflows, series, exports)
+    and the same-origin spatial gateway. Initially one deployment per the
+    architecture note "The application backend and spatial gateway may share a
+    deployment initially"; split only with an explicit revision.
+  labels:
+    app.kubernetes.io/part-of: utah-water-dashboard
+    utah-water/service-class: stateless
+spec:
+  image: ${RELEASE_IMAGE_BACKEND_DIGEST}
+  # --- scaling (stateless; bounded) ----------------------------------------
+  minInstances: 1
+  maxInstances: 10
+  # Max in-flight requests per instance. Together with maxInstances this is
+  # the request-side queue cap: work above it is rejected/backpressured, never
+  # silently queued without bound (backlog acceptance: "cap connection/render
+  # queues").
+  concurrency: 40
+  # Request timeout cap. Long exports and heavy renders are NOT allowed to
+  # stretch this: they are acknowledged background jobs on the worker queue
+  # (02-technical-specification.md exports; FR-065 bounded queries).
+  timeoutSeconds: 30
+  # --- network --------------------------------------------------------------
+  vpcEgress:
+    # Placeholder reference; resolved per environment at qualification time.
+    connectorRef: ${VPC_EGRESS_CONNECTOR_REF}
+    egressMode: private-ranges-only
+    # The browser never connects to PostgreSQL; only this service (and the
+    # worker + NeoServer) hold private database reachability.
+  ingressAllowance: internal-and-cloud-load-balancing
+  # --- database connection pool caps (per instance) -------------------------
+  connectionPools:
+    appReadWrite:
+      # Bounded pool for domain queries/writes via the app DB account
+      # (separate accounts per 03-architecture.md: publication read, app
+      # query, app write/migration, ingestion).
+      maxConnections: 20
+      minConnections: 5
+      acquireTimeoutMs: 5000
+      statementTimeoutMs: 15000
+      idleTimeoutMs: 30000
+      secretRef: ${SECRET_REF:database-app-url}
+    publicationRead:
+      # Bounded pool the gateway uses for approved-view reads only.
+      maxConnections: 10
+      minConnections: 2
+      acquireTimeoutMs: 5000
+      statementTimeoutMs: 15000
+      idleTimeoutMs: 30000
+      secretRef: ${SECRET_REF:database-publication-read-url}
+  # --- queue caps (in-service bounded queues; overflow fails loudly) ---------
+  queueCaps:
+    renderQueue:
+      description: Bounded in-memory render/series downsample queue.
+      maxDepth: 50
+      enqueueTimeoutMs: 2000
+    exportQueue:
+      description: >-
+        Acknowledged export jobs handed to the worker (FR-065); the service
+        keeps only the acknowledgement path, the durable queue is the outbox.
+      maxDepth: 100
+      enqueueTimeoutMs: 2000
+  # --- session/authorization cache caps -------------------------------------
+  authCache:
+    # Stale grants must never outlive revocation propagation
+    # ("Internal revoked access" target, 02-technical-specification.md).
+    entitlementTtlSeconds: 30
+    negativeCacheTtlSeconds: 30
+  rateLimits:
+    publicPerMinute: 600
+    authenticatedPerMinute: 1200
+  # --- observability contract (details in ops/monitoring.md, NFR-009) --------
+  observability:
+    requestIdPropagation: true
+    logRedaction: nfr-009
+    metrics:
+      - requestLatency
+      - deniedAccess
+      - poolSaturation
+      - queueDepth
+      - queueRejections
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: DATABASE_APP_URL
+      valueFrom: ${SECRET_REF:database-app-url}
+    - name: DATABASE_PUBLICATION_READ_URL
+      valueFrom: ${SECRET_REF:database-publication-read-url}
+    - name: OIDC_ISSUER_URL
+      valueFrom: ${SECRET_REF:oidc-issuer-url}
+    - name: SESSION_SIGNING_KEY
+      valueFrom: ${SECRET_REF:session-signing-key}
+    - name: NEOSERVER_INTERNAL_URL
+      valueFrom: ${SECRET_REF:neoserver-internal-url}
+    - name: NEOSERVER_SCOPED_CREDENTIAL
+      valueFrom: ${SECRET_REF:neoserver-scoped-credential}
+    - name: ATTACHMENT_BUCKET_REF
+      valueFrom: ${SECRET_REF:attachment-bucket-ref}
