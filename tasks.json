@@ -116,7 +116,8 @@
         "WD-006"
       ],
       "release": "MVP",
-      "status": "planned"
+      "status": "completed",
+      "merged_commit": "fd4fc234fbc6a8886a40b31a8a87d40c150f1f92"
     },
     {
       "id": "WD-008",
