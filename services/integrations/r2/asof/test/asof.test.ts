@@ -14,7 +14,9 @@
  *  - determinism: identical inputs serialize identically (twice);
  *  - authorization via the policy engine evaluated as of T: a restricted
  *    stream is denied cross-scope (hidden-object 404) and to anonymous
- *    callers, while an in-scope engineer reconstructs it.
+ *    callers, while an in-scope engineer reconstructs it; an EMPTY range
+ *    window on an existing non-public stream hides with the same 404 bytes
+ *    as an unknown id (DEFECT-R2-1 parity; never an existence oracle).
  *
  * Run:
  *   node --test --experimental-strip-types services/integrations/r2/asof/test/asof.test.ts
@@ -228,6 +230,87 @@ test('authorization: restricted stream as-of is denied anonymous and cross-scope
 test('public stream answers anonymous as-of via the public read branch', () => {
   const result = reconstructAsOf(source, { principal: null, logicalKey: 'str-corinne-q:2026-03-06T18:00:00Z', asOf: '2026-03-07T00:00:00Z' });
   assert.equal(result.outcome, 'known');
+});
+
+test('DEFECT-R2-1 regression: empty-window range on an existing non-public stream is the SAME hidden 404 as an unknown id', () => {
+  // str-ogden-q-proposed exists (restricted, Weber system) but carries NO
+  // observations, so every window is empty - previously the empty window
+  // skipped authorization entirely and answered ok, echoing the stream id
+  // while an unknown id denied: an existence oracle. Anonymous and
+  // out-of-scope actors must now get the IDENTICAL denial bytes.
+  const probed = 'str-ogden-q-proposed';
+  assert.ok(store.world.objects[probed], 'precondition: the probed stream exists in the policy world');
+  assert.ok(!store.observations.some((observation) => observation.streamId === probed), 'precondition: the stream has no observations');
+  const window = { from: '2026-01-01T00:00:00Z', to: '2027-01-01T00:00:00Z', asOf: '2026-03-09T00:00:00Z' } as const;
+
+  for (const principal of [null, fatima] as const) {
+    // Fatima is scoped to sys-bear-river: out of scope for the Weber stream.
+    const label = principal ? 'out-of-scope engineer' : 'anonymous';
+    const existing = reconstructRangeAsOf(source, { principal, streamId: probed, ...window });
+    assert.equal(existing.outcome, 'denied', `${label}: an existing unreadable stream must deny, not answer ok`);
+    if (existing.outcome === 'denied') {
+      assert.equal(existing.status, 404, `${label}: the hidden-object 404`);
+      assert.equal(existing.code, 'NOT_FOUND');
+    }
+    const unknown = reconstructRangeAsOf(source, { principal, streamId: 'str-does-not-exist', ...window });
+    assert.equal(unknown.outcome, 'denied');
+    assert.equal(
+      serializeAsOfRangeResult(existing),
+      serializeAsOfRangeResult(unknown),
+      `${label}: existing-but-unreadable and unknown must be byte-indistinguishable`,
+    );
+  }
+
+  // The same parity holds for a restricted stream WITH observations probed
+  // through a window slice that contains none of them.
+  const emptySlice = reconstructRangeAsOf(source, {
+    principal: priya, // Weber engineer: out of scope for the Bear-River owner stream
+    streamId: 'str-hyrum-q-owner',
+    from: '2026-01-01T00:00:00Z',
+    to: '2026-01-02T00:00:00Z',
+    asOf: '2026-03-08T00:00:00Z',
+  });
+  assert.equal(emptySlice.outcome, 'denied');
+  if (emptySlice.outcome === 'denied') assert.equal(emptySlice.status, 404);
+});
+
+test('DEFECT-R2-1 regression: empty windows still answer ok for actors who may read the stream', () => {
+  // In-scope engineer on the observation-less restricted stream: ok, zero points.
+  const inScope = reconstructRangeAsOf(source, {
+    principal: priya, // Weber-River engineer: in scope for str-ogden-q-proposed
+    streamId: 'str-ogden-q-proposed',
+    from: '2026-01-01T00:00:00Z',
+    to: '2027-01-01T00:00:00Z',
+    asOf: '2026-03-09T00:00:00Z',
+  });
+  assert.equal(inScope.outcome, 'ok');
+  if (inScope.outcome === 'ok') {
+    assert.equal(inScope.points.length, 0);
+    assert.equal(inScope.knownCount, 0);
+    assert.equal(inScope.gapCount, 0);
+  }
+
+  // In-scope engineer on a restricted stream through an EMPTY slice: still ok.
+  const ownerEmpty = reconstructRangeAsOf(source, {
+    principal: fatima, // Bear-River engineer: in scope for the owner stream
+    streamId: 'str-hyrum-q-owner',
+    from: '2026-01-01T00:00:00Z',
+    to: '2026-01-02T00:00:00Z',
+    asOf: '2026-03-08T00:00:00Z',
+  });
+  assert.equal(ownerEmpty.outcome, 'ok');
+  if (ownerEmpty.outcome === 'ok') assert.equal(ownerEmpty.points.length, 0);
+
+  // Public stream, anonymous, empty window: the public read branch answers.
+  const publicEmpty = reconstructRangeAsOf(source, {
+    principal: null,
+    streamId: 'str-corinne-q',
+    from: '2026-01-01T00:00:00Z',
+    to: '2026-01-02T00:00:00Z',
+    asOf: '2026-03-08T00:00:00Z',
+  });
+  assert.equal(publicEmpty.outcome, 'ok');
+  if (publicEmpty.outcome === 'ok') assert.equal(publicEmpty.points.length, 0);
 });
 
 test('input validation: unparseable instants and unknown keys are 422/404, never a throw', () => {

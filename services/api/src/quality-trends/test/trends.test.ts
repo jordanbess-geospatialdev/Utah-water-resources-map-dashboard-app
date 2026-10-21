@@ -159,6 +159,47 @@ test('FR-043 reconciliation: records on unknown streams never list, and still ba
   assert.equal(reconciliation.balanced, true);
 });
 
+test('FR-043 reconciliation: an exact duplicate on an UNKNOWN stream counts in exactly ONE bucket (DEFECT-R2-2 regression)', () => {
+  // One record delivered twice on a stream absent from the site table: the
+  // unique evidence id counts ONCE as unattributed, and the duplicate copy
+  // counts ONCE as duplicatesDropped - never both per copy, which used to
+  // push attributed + duplicates + unattributed past the raw count and flip
+  // balanced to false on this input class.
+  const input = fixtureTrendInput({
+    qcHits: [
+      ...reviewedQcHits(),
+      { hitId: 'qc:range:str-ghost:2026-03-09T00:00:00Z', streamId: 'str-ghost', family: 'range', interval: { start: '2026-03-09T00:00:00Z', end: '2026-03-09T01:00:00Z' } },
+      { hitId: 'qc:range:str-ghost:2026-03-09T00:00:00Z', streamId: 'str-ghost', family: 'range', interval: { start: '2026-03-09T00:00:00Z', end: '2026-03-09T01:00:00Z' } },
+    ],
+  });
+  const report = buildTrendReport(input);
+  const reconciliation = reconcileTrends(input, report.incidents);
+  assert.equal(reconciliation.rawRecordCount, 29, 'precondition: 27 fixture records + two deliveries of the ghost-stream record');
+  assert.equal(reconciliation.duplicatesDropped, 1, 'the second delivery is a duplicate');
+  assert.equal(reconciliation.unattributedCount, 1, 'the unknown-stream record is unattributed ONCE (per unique evidence id)');
+  assert.equal(reconciliation.attributedCount, 27);
+  assert.equal(reconciliation.balanced, true, '27 + 1 + 1 == 29: each record counted in exactly one bucket');
+  assert.deepEqual(reconciliation.doubleCountedIds, []);
+  assert.deepEqual(reconciliation.phantomIds, []);
+  // Mixed classes together stay exact too: duplicates on KNOWN and UNKNOWN
+  // streams in one corpus.
+  const mixed = fixtureTrendInput({
+    qcHits: [
+      ...reviewedQcHits(),
+      reviewedQcHits()[0]!, // exact duplicate on a KNOWN stream
+      { hitId: 'qc:rate:str-ghost:2026-03-09T02:00:00Z', streamId: 'str-ghost', family: 'rate', interval: { start: '2026-03-09T02:00:00Z', end: '2026-03-09T03:00:00Z' } },
+      { hitId: 'qc:rate:str-ghost:2026-03-09T02:00:00Z', streamId: 'str-ghost', family: 'rate', interval: { start: '2026-03-09T02:00:00Z', end: '2026-03-09T03:00:00Z' } },
+      { hitId: 'qc:rate:str-ghost:2026-03-09T02:00:00Z', streamId: 'str-ghost', family: 'rate', interval: { start: '2026-03-09T02:00:00Z', end: '2026-03-09T03:00:00Z' } },
+    ],
+  });
+  const mixedReconciliation = reconcileTrends(mixed, deriveIncidents(mixed));
+  assert.equal(mixedReconciliation.rawRecordCount, 31); // 27 + 1 + 3
+  assert.equal(mixedReconciliation.duplicatesDropped, 3); // one copy of the known-stream hit + two extra ghost copies
+  assert.equal(mixedReconciliation.unattributedCount, 1); // the ghost evidence id, once
+  assert.equal(mixedReconciliation.attributedCount, 27); // the duplicated known-stream hit still counts exactly once
+  assert.equal(mixedReconciliation.balanced, true);
+});
+
 test('recurrence metrics: counts by kind, recurrence rate per week and time-since-last per site', () => {
   const report = buildTrendReport(fixtureTrendInput());
   const row = (stationId: string, kind: string) => {

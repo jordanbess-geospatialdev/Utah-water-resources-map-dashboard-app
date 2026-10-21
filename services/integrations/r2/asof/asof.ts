@@ -28,6 +28,10 @@
  *     actors (cross-scope denial maps to a hidden-object 404, like the
  *     WD-012 attachment wall). Public streams answer via the public read
  *     branch, which is publication-state based and time independent.
+ *     Range queries with an EMPTY window admit the stream itself through
+ *     the same policy, so an existing non-public stream an actor cannot
+ *     read and an unknown stream id deny with IDENTICAL 404 bytes - an
+ *     empty window is never an existence oracle (DEFECT-R2-1).
  *
  * Purity: no clock reads (every instant is injected), no randomness, no
  * I/O, no network. The module is a read-only projection over an injected
@@ -288,6 +292,18 @@ function toDenial(reason: string, isPublic: boolean): AsOfDenial {
 }
 
 /**
+ * The hidden-object denial for a STREAM an actor may not learn about
+ * (DEFECT-R2-1): the same wording as the module's other hidden-object
+ * denials (toDenial's DENY_OUT_OF_SCOPE branch), with no id echo and no
+ * engine reason, so an existing-but-unreadable stream and a genuinely
+ * unknown id are indistinguishable in outcome, status, code, message and
+ * serialized export - for any probed id, byte-identical.
+ */
+function hiddenStreamDenial(): AsOfDenial {
+  return { outcome: 'denied', status: 404, code: 'NOT_FOUND', message: 'object not found', policyReason: null };
+}
+
+/**
  * Decide whether the acting principal may reconstruct this observation's
  * T-view at all. Public observations answer via the public read branch
  * (publication state is time independent); everything else requires an
@@ -311,6 +327,35 @@ function authorizeObservation(source: AsOfSource, observation: ObservationRow, p
   );
   if (decision.effect === 'allow') return null;
   return toDenial(decision.reason, policyObject.visibility === 'public');
+}
+
+/**
+ * Whether the acting principal may read the STREAM itself, evaluated AS OF T
+ * on the stream's own policy object with the same two branches
+ * authorizeObservation uses per observation (the publication-state public
+ * read first, then the restricted-read grant). This carries authorization
+ * when a range window contains NO observations, so no per-observation
+ * decision exists to lean on: without it an empty window would answer ok and
+ * echo the stream id — an existence oracle on non-public streams
+ * (DEFECT-R2-1). Readability here deliberately mirrors the per-observation
+ * path (same action, same fields, same as-of evaluation), so an actor who
+ * may read the stream's observations may also learn the stream answers.
+ */
+function streamReadableAsOf(source: AsOfSource, streamId: string, principal: Principal | null, asOf: string): boolean {
+  const policyObject = source.world.objects[streamId];
+  if (!policyObject) return false;
+  const publicRead = evaluatePublicRead(
+    { principal: null, action: PUBLIC_READ_ACTION, object: { kind: policyObject.kind, id: policyObject.id } },
+    source.world,
+    asOf,
+  );
+  if (publicRead.effect === 'allow') return true;
+  const decision: Decision = evaluate(
+    { principal, action: RESTRICTED_READ_ACTION, object: { kind: policyObject.kind, id: policyObject.id, fields: ['public'] } },
+    source.world,
+    asOf,
+  );
+  return decision.effect === 'allow';
 }
 
 // ---------------------------------------------------------------------------
@@ -409,7 +454,7 @@ export function reconstructRangeAsOf(source: AsOfSource, query: AsOfRangeQuery):
     return { outcome: 'denied', status: 422, code: 'VALIDATION_FAILED', message: 'range must satisfy from < to (half-open [from, to))', policyReason: null };
   }
   if (!source.world.objects[query.streamId]) {
-    return { outcome: 'denied', status: 404, code: 'NOT_FOUND', message: `unknown stream "${query.streamId}"`, policyReason: null };
+    return hiddenStreamDenial();
   }
   const asOfMs = Date.parse(asOf);
   const inWindow = source.observations
@@ -422,6 +467,18 @@ export function reconstructRangeAsOf(source: AsOfSource, query: AsOfRangeQuery):
   for (const observation of inWindow) {
     const denial = authorizeObservation(source, observation, query.principal, asOf);
     if (denial) return denial;
+  }
+
+  // An EMPTY window has no observation decision to lean on, so the stream
+  // itself is admitted via policy (mirroring the point-query path,
+  // DEFECT-R2-1): an actor who cannot read a non-public stream gets the
+  // SAME hidden-object 404 an unknown stream id gets - byte-identical, so
+  // probing ids with empty windows is never an existence oracle. Windows
+  // that carry observations keep the per-observation denials above, and
+  // readable streams (public, or in-scope at T) still answer ok with zero
+  // points.
+  if (inWindow.length === 0 && !streamReadableAsOf(source, query.streamId, query.principal, asOf)) {
+    return hiddenStreamDenial();
   }
 
   const points: AsOfSeriesPoint[] = inWindow.map((observation) => {

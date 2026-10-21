@@ -440,8 +440,6 @@ export function reconcileTrends(input: TrendInput, incidents: readonly TrendInci
     ...(input.curveSupersessions ?? []).map((supersession) => supersession.supersededVersionId),
   ];
   const rawUnique = new Set(raw);
-  const knownStreamIds = new Set(Object.keys(input.streamMeta));
-  const onKnownStream = (streamId: string): boolean => knownStreamIds.has(streamId);
 
   const attributed = new Map<string, number>();
   let attributedCount = 0;
@@ -452,25 +450,18 @@ export function reconcileTrends(input: TrendInput, incidents: readonly TrendInci
 
   // Records that produced no incident row: unknown streams (expected for
   // partial site tables) or - a derivation bug - records on known streams.
+  // Counted per UNIQUE evidence id (DEFECT-R2-2): an exact-duplicate
+  // delivery of an unattributed record is a duplicate (duplicatesDropped),
+  // never a SECOND unattributed record, so every raw record lands in
+  // exactly one bucket - attributed + duplicatesDropped + unattributed ==
+  // raw holds on every input class, including duplicates on streams absent
+  // from the site table.
   let unattributed = 0;
-  for (const hit of input.qcHits ?? []) if (!onKnownStream(hit.streamId)) unattributed += 1;
-  for (const correction of input.corrections ?? []) if (!onKnownStream(correction.streamId)) unattributed += 1;
-  for (const issue of input.knownIssues ?? []) if (!onKnownStream(issue.streamId)) unattributed += 1;
-  for (const supersession of input.curveSupersessions ?? []) if (!onKnownStream(supersession.streamId)) unattributed += 1;
-
-  const attributedIds = new Set(attributed.keys());
-  const byIdStreamKnown = (id: string): boolean =>
-    (input.qcHits ?? []).some((hit) => hit.hitId === id && onKnownStream(hit.streamId)) ||
-    (input.corrections ?? []).some((correction) => correction.revisionId === id && onKnownStream(correction.streamId)) ||
-    (input.knownIssues ?? []).some((issue) => issue.issueId === id && onKnownStream(issue.streamId)) ||
-    (input.curveSupersessions ?? []).some(
-      (supersession) => supersession.supersededVersionId === id && onKnownStream(supersession.streamId),
-    );
   for (const id of rawUnique) {
-    if (attributedIds.has(id)) continue;
-    if (byIdStreamKnown(id)) unattributed += 1; // would be a derivation bug
+    if (!attributed.has(id)) unattributed += 1;
   }
 
+  const attributedIds = new Set(attributed.keys());
   const duplicatesDropped = raw.length - rawUnique.size;
   return {
     rawRecordCount: raw.length,
