@@ -97,8 +97,9 @@
         "WD-002"
       ],
       "release": "MVP",
-      "status": "planned",
-      "scope_note": "apps/web/tests/** added 2026-10-21 by orchestrator: prototype test port target for the app package (tests/** root remains QA-owned)."
+      "status": "completed",
+      "scope_note": "apps/web/tests/** added 2026-10-21 by orchestrator: prototype test port target for the app package (tests/** root remains QA-owned).",
+      "merged_commit": "482c49593c63c0293008d90b6a4f799c8b3b87a9"
     },
     {
       "id": "WD-007",
