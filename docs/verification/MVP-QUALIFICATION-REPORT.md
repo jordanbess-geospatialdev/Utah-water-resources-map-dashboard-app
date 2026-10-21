@@ -13,6 +13,15 @@ matrix" T-01..T-16, "Test data", "Commands and CI gates").
 | Qualification commit | the single `test(WD-021)` commit on this branch (`git log --grep="test(WD-021)" -1`) |
 | Verdict | **MVP machine-checkable evidence chain PASSES on fixture evidence. Production authorization additionally requires the owner/staging actions listed in "Verdict".** |
 
+
+### Resolution record (2026-10-21)
+
+- **DEFECT-Q1 FIXED** — exclusion lists anonymized to class labels + counts (fix/Q1-Q2-public-projections, merged). Tripwire now pins the fixed state: zero hidden-object names in any public summary; exclusion accounting must remain present.
+- **DEFECT-Q2 FIXED** — default-public area totals run a visibility wall before status rules; non-public stations/streams aggregate as anonymous class counts and are never itemized (same fix). Tripwire now pins zero hidden-object ids in public totals plus mandatory anonymous omission accounting. Golden fractions unchanged (2/4, 1/68, 66/68).
+- **DEFECT-Q3 FIXED** — statewide-administration satisfies field-visits only for steward-family principals via SATISFACTION_ROLE_GATES (fix/Q3-capability-ceiling, merged); full capability audit codified as invariant tests; POLICY_VERSION 0.1.1.
+- **DEFECT-Q4 RESOLVED** — delivery backlog statuses re-synchronized (Q4 evidence updated 2026-10-21).
+- Re-run after fixes: full qualification sweep Verdict PASS, exit 0, deterministic.
+
 ## 1. Environment record
 
 | Item | Value |

@@ -219,23 +219,14 @@ test('summary indicators carry no canary bytes and no unexpected hidden-object n
   }
 });
 
-test('area totals carry no canary bytes and no hidden-object names beyond pinned DEFECT-Q2', () => {
-  // DEFECT-Q2 (pinned): the default-PUBLIC area totals enumerate every
-  // stream of the fixture world in per-stream breakdown rows, including the
-  // restricted owner stream, the internal diagnostic stream AND the
-  // restricted proposed gauge (ids, display names, properties,
-  // exclusionReason) - an inventory disclosure of hidden objects to
-  // anonymous callers (same class as DEFECT-Q1). Pinned set below; any
-  // OTHER hidden object id fails, and shrinking the set fails the pin.
-  const pinned = [
-    'sta-bear-lake-diagnostic',
-    'str-diag-voltage',
-    'sta-hyrum-diversion-owner',
-    'str-hyrum-q-owner',
-    'sta-ogden-valley-proposed',
-    'str-ogden-q-proposed',
-  ];
-  const hiddenIds = RESTRICTED_OBJECT_IDS.filter((id) => !pinned.includes(id));
+test('area totals carry no canary bytes and no hidden-object names (DEFECT-Q2 fixed)', () => {
+  // DEFECT-Q2 FIXED (2026-10-21, fix/Q1-Q2-public-projections): the default-
+  // PUBLIC area totals run a visibility wall before the status rules; every
+  // non-public station/stream is aggregated as an anonymous class count and
+  // is never itemized. This tripwire now pins the FIXED state: ANY hidden
+  // object id anywhere in public totals fails loudly, and the anonymous
+  // omission classes must be present so the wall cannot be "fixed" by
+  // silently dropping the accounting.
   const totals = [
     fixtureAreaTotals({ area: { kind: 'statewide' }, start: '2026-03-06T00:00:00Z', end: '2026-03-09T00:00:00Z', basis: 'best-available' }),
     fixtureAreaTotals({ area: { kind: 'system', systemId: 'sys-bear-river' }, start: '2026-03-06T00:00:00Z', end: '2026-03-09T00:00:00Z', basis: 'raw' }),
@@ -245,33 +236,31 @@ test('area totals carry no canary bytes and no hidden-object names beyond pinned
     assert.deepEqual(findCanaryHits(result.value), [], `totals surface ${index} leaked restricted values`);
     assert.deepEqual(findRestrictedKeys(result.value), [], `totals surface ${index} carries restricted block keys`);
     const serialized = JSON.stringify(result.value);
-    for (const restrictedId of hiddenIds) {
-      assert.ok(!serialized.includes(restrictedId), `totals surface ${index} names restricted object ${restrictedId}`);
+    for (const restrictedId of RESTRICTED_OBJECT_IDS) {
+      assert.ok(!serialized.includes(restrictedId), `DEFECT-Q2 regression: totals surface ${index} names restricted object ${restrictedId}`);
     }
   }
-  // The pinned set really is present today (the pin is not vacuous):
+  // The fix must be present, not vacuous: the statewide default-public
+  // projection reports the omitted stream classes anonymously.
   const statewide = JSON.stringify(totals[0].value);
-  for (const pinnedId of pinned) {
-    assert.ok(statewide.includes(pinnedId), `DEFECT-Q2 pin: ${pinnedId} expected in current public totals output`);
-  }
+  assert.ok(statewide.includes('omittedStreams'), 'anonymous omission accounting must be present');
 });
 
-test('DEFECT-Q1 pinned: the ONLY hidden object a public summary names is the proposed station id in exclusion lists', () => {
-  // Documented defect (filed in docs/verification/MVP-QUALIFICATION-REPORT.md,
-  // DEFECT-Q1): summaryIndicators/statewideOverview embed exclusion ID lists
-  // that disclose the identifier of sta-ogden-valley-proposed — a
-  // restricted-visibility, unpublished station whose existence should not be
-  // public (the hidden-object rule). This test PINS the current behavior so
-  // (a) any ADDITIONAL hidden-object name in any summary surface fails
-  // loudly, and (b) removing DEFECT-Q1 fails this test, forcing the
-  // qualification report to be updated when the owner fixes it.
+test('DEFECT-Q1 fixed: public summaries name no hidden object in exclusion lists', () => {
+  // DEFECT-Q1 FIXED (2026-10-21, fix/Q1-Q2-public-projections):
+  // summaryIndicators/statewideOverview exclusion lists carry class labels
+  // and counts only - no station ids. This tripwire now pins the FIXED
+  // state: no restricted-visibility object identifier may appear anywhere
+  // in a public summary surface, and the exclusion accounting (counts)
+  // must remain present so exclusions cannot silently vanish.
   const world = summaryWorld();
   const serialized = JSON.stringify(apiStatewideOverview(world));
   const disclosed = RESTRICTED_OBJECT_IDS.filter((id) => serialized.includes(id));
-  assert.deepEqual(disclosed, ['sta-ogden-valley-proposed'], 'exactly DEFECT-Q1 may be disclosed; anything else is a new leak');
+  assert.deepEqual(disclosed, [], 'no hidden-object name may be disclosed by a public summary');
   assert.ok(!serialized.includes('sta-bear-lake-diagnostic'), 'internal diagnostic station must never be named');
   assert.ok(!serialized.includes('sta-hyrum-diversion-owner'), 'restricted owner station must never be named');
   assert.ok(!serialized.includes('str-hyrum-q-owner'), 'restricted stream must never be named');
+  assert.ok(/excluded/i.test(serialized), 'exclusion accounting (counts) must remain visible');
 });
 
 test('entitled distribution report carries no canary bytes; out-of-scope request is denied', () => {
