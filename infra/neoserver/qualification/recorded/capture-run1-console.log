@@ -1,0 +1,21 @@
+[capture] base=http://localhost:9000 workspace=water-public out=C:\TMG\Client_work\Utah_WaterResources_MapApp\utah-water-dashboard-worktrees\t05-neoserver-capture\infra\neoserver\qualification\recorded
+  ok   ogc-landing: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+  ok   ogc-conformance: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+  ok   ogc-openapi: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+  ok   ogc-collections: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+  ok   collections lists layer "stations"
+  ok   ogc-collection: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+  ok   ogc-items-page1: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+  ok   items paging followed to page 1
+[capture] control tile for 41.6337,-112.1965 @z10 -> matrix z/y/x = 10/381/192 (NW corner 41.771,-112.500)
+  FAIL tilejson: status 200 (got 404)
+  FAIL mvt-tile-control-z10: status 200 (got 404)
+  FAIL wfs-getcapabilities: status 200 (got 404)
+  FAIL wfs-getfeature-geojson: status 200 (got 404)
+  FAIL wms-getcapabilities: status 200 (got 404)
+  FAIL wms-getmap-epsg3857: status 200 (got 404)
+  ok   negative-cohort-without-credential: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+  ok   negative-management-anonymous: no private canary (SYNTHETIC-NEVER-PUBLISH / internal note / gate_code absent)
+
+[capture] 14 captures written to C:\TMG\Client_work\Utah_WaterResources_MapApp\utah-water-dashboard-worktrees\t05-neoserver-capture\infra\neoserver\qualification\recorded (manifest.json)
+[capture] FAILED: 6 check(s) failed - qualification NOT met

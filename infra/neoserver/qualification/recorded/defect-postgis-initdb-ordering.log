@@ -1,0 +1,54 @@
+postgis-1  | The files belonging to this database system will be owned by user "postgres".
+postgis-1  | This user must also own the server process.
+postgis-1  | 
+postgis-1  | The database cluster will be initialized with locale "en_US.utf8".
+postgis-1  | The default database encoding has accordingly been set to "UTF8".
+postgis-1  | The default text search configuration will be set to "english".
+postgis-1  | 
+postgis-1  | Data page checksums are disabled.
+postgis-1  | 
+postgis-1  | fixing permissions on existing directory /var/lib/postgresql/data ... ok
+postgis-1  | creating subdirectories ... ok
+postgis-1  | selecting dynamic shared memory implementation ... posix
+postgis-1  | selecting default "max_connections" ... 100
+postgis-1  | selecting default "shared_buffers" ... 128MB
+postgis-1  | selecting default time zone ... Etc/UTC
+postgis-1  | creating configuration files ... ok
+postgis-1  | running bootstrap script ... ok
+postgis-1  | performing post-bootstrap initialization ... ok
+postgis-1  | initdb: warning: enabling "trust" authentication for local connections
+postgis-1  | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
+postgis-1  | syncing data to disk ... ok
+postgis-1  | 
+postgis-1  | 
+postgis-1  | Success. You can now start the database server using:
+postgis-1  | 
+postgis-1  |     pg_ctl -D /var/lib/postgresql/data -l logfile start
+postgis-1  | 
+postgis-1  | waiting for server to start....2026-10-21 11:48:40.249 UTC [48] LOG:  starting PostgreSQL 17.5 (Debian 17.5-1.pgdg110+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit
+postgis-1  | 2026-10-21 11:48:40.253 UTC [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgis-1  | 2026-10-21 11:48:40.262 UTC [51] LOG:  database system was shut down at 2026-10-21 11:48:39 UTC
+postgis-1  | 2026-10-21 11:48:40.268 UTC [48] LOG:  database system is ready to accept connections
+postgis-1  |  done
+postgis-1  | server started
+postgis-1  | CREATE DATABASE
+postgis-1  | 
+postgis-1  | 
+postgis-1  | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/10-qualification-station-layer.sql
+postgis-1  | CREATE SCHEMA
+postgis-1  | CREATE TABLE
+postgis-1  | INSERT 0 4
+postgis-1  | 2026-10-21 11:48:40.512 UTC [61] ERROR:  function st_makepoint(double precision, double precision) does not exist at character 127
+postgis-1  | 2026-10-21 11:48:40.512 UTC [61] HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+postgis-1  | 2026-10-21 11:48:40.512 UTC [61] STATEMENT:  CREATE OR REPLACE VIEW qualification.stations_public_v AS
+postgis-1  | 	SELECT
+postgis-1  | 	    station_id,
+postgis-1  | 	    display_name,
+postgis-1  | 	    status,
+postgis-1  | 	    ST_SetSRID(ST_MakePoint(lon, lat), 4326) AS geom
+postgis-1  | 	FROM qualification.station_all
+postgis-1  | 	WHERE visibility = 'public';
+postgis-1  | psql:/docker-entrypoint-initdb.d/10-qualification-station-layer.sql:49: ERROR:  function st_makepoint(double precision, double precision) does not exist
+postgis-1  | LINE 6:     ST_SetSRID(ST_MakePoint(lon, lat), 4326) AS geom
+postgis-1  |                        ^
+postgis-1  | HINT:  No function matches the given name and argument types. You might need to add explicit type casts.

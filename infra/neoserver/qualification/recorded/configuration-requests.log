@@ -1,0 +1,27 @@
+# NeoServer management-API configuration requests (2026-10-21T11:55:14.275Z)
+# Format: METHOD path -> status [note]. Credential values are never logged.
+GET /ready -> 200 [anonymous readiness probe]
+POST /api/v1/workspaces -> 201
+POST /api/v1/workspaces/water-public/services -> 201 [public=true service; password from .env, not logged]
+POST /api/v1/workspaces/water-public/services/qual-postgis/test-connection -> 400
+POST /api/v1/workspaces/water-public/services/qual-postgis/discover -> 200
+# discover payload: {"layers":[]}
+POST /api/v1/workspaces/water-public/services/qual-postgis/layers -> 201 [public_id=stations over qualification.stations_public_v]
+PUT /api/v1/workspaces/water-public/settings/ogcapi -> 200
+PUT /api/v1/workspaces/water-public/settings/ogc-tiles -> 200
+PUT /api/v1/workspaces/water-public/settings/wms -> 200
+PUT /api/v1/workspaces/water-public/settings/wfs -> 200
+POST /api/v1/workspaces -> 201
+POST /api/v1/workspaces/water-bear-cohort/services -> 201 [public=false service: anonymous reads must be refused]
+POST /api/v1/workspaces/water-bear-cohort/services/qual-postgis-cohort/layers -> 201 [cohort layer over qualification.stations_cohort_v]
+PUT /api/v1/workspaces/water-bear-cohort/settings/ogcapi -> 200
+POST /api/v1/workspaces/water-public/apikeys -> 201 [role viewer; secret returned once, written only to local .env]
+# viewer key created for water-public (secret value NOT logged; handed to capture.mjs via env)
+# provisioning finished 2026-10-21T11:55:15.623Z: 1 failed request(s)
+PUT /api/v1/workspaces/water-public/settings/ogc-tiles -> 200 [vector_tiles.enabled=true nested fix; run-1 capture 404d tiles because flat {"enabled":true} leaves nested flag false]
+POST /api/v1/workspaces/water-public/services/qual-postgis/validate-sql -> 200 [sql_view validation]
+PUT /api/v1/workspaces/water-public/services/qual-postgis/layers/{id} -> 200 [sql_view with id_column=mvt_id: NeoServer 0.3.0 MVT gen requires an integer feature-id column; seeded publication view has none (mvt_agg_transfn Could not find column id of integer type). Deterministic hashtext-based id projected INSIDE the sql view; publication view itself untouched]
+POST /api/v1/workspaces/water-public/services/qual-postgis/validate-sql -> 200 [sql_view row_number() OVER () AS mvt_id; hashtext NOT on the sql-view function allowlist]
+PUT /api/v1/workspaces/water-public/services/qual-postgis/layers/{id} -> 200 [final sql_view: id_column=mvt_id via row_number; MVT feature ids are per-query integers]
+DELETE /api/v1/workspaces/water-public/services/qual-postgis/layers/{id} -> 200 [PUT does not persist sql_view (silently dropped); recreated layer with sql_view at CREATE]
+POST /api/v1/workspaces/water-public/services/qual-postgis/layers -> 201 [layer recreated with sql_view id_column=id, row_number() OVER () AS id]

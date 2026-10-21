@@ -1,0 +1,22 @@
+# T-05 manual probes (2026-10-21T12:04:13Z)
+
+== 1. tile z/y/x swap control (EXPECTATIONS item 1) ==
+GET /ogc-tiles/collections/stations/tiles/WebMercatorQuad/10/381/192 (control z/y/x) -> 200 application/vnd.mapbox-vector-tile 129B
+GET /ogc-tiles/collections/stations/tiles/WebMercatorQuad/10/192/381 (SWAPPED) -> 200 application/vnd.mapbox-vector-tile 17B
+3bab04667e9a59f7e885d25458e12835b759c8e98421001b22bc444d462d3c87 *infra/neoserver/qualification/recorded/manual-probes/tile-control-10-381-192.pbf
+396bba7432b3c9fe31831c34da8a5f2ff60b5786c2d815219321e37f3f2fbc86 *infra/neoserver/qualification/recorded/manual-probes/tile-swapped-10-192-381.pbf
+
+== 2. format suffix on tile path (EXPECTATIONS item 1) ==
+GET .../WebMercatorQuad/10/381/192.pbf (suffix) -> 400 application/json
+== 3. WMS 1.3.0 EPSG:4326 axis order probe (EXPECTATIONS item 5) ==
+GetMap CRS=EPSG:4326 BBOX=37,-114.1,42,-108.9 (lat,lon order) -> 200 image/png 1988B
+GetMap CRS=EPSG:4326 BBOX=-114.1,37,-108.9,42 (lon,lat order) -> 200 image/png 820B
+GetMap CRS=EPSG:4326 BBOX=-30,30,-25,35 (empty Atlantic baseline) -> 200 image/png 820B
+wms-getmap-4326-latlon.png DECODE-ERR color type 8 unsupported
+wms-getmap-4326-lonlat.png DECODE-ERR color type 8 unsupported
+wms-getmap-empty-baseline.png DECODE-ERR color type 8 unsupported
+manual-probes/wms-getmap-4326-latlon.png      {"w":256,"h":256,"bitDepth":8,"colorType":6,"nonTransparent":339}
+manual-probes/wms-getmap-4326-lonlat.png      {"w":256,"h":256,"bitDepth":8,"colorType":6,"nonTransparent":0}
+manual-probes/wms-getmap-empty-baseline.png   {"w":256,"h":256,"bitDepth":8,"colorType":6,"nonTransparent":0}
+wms-getmap-epsg3857.png                       {"w":256,"h":256,"bitDepth":8,"colorType":6,"nonTransparent":0}
+wms-getmap-epsg3857.png (fixed BBOX): 256x256 bitDepth 8 colorType 6 nonTransparent pixels: 345 bytes: 2026

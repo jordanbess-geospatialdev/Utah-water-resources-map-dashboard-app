@@ -349,8 +349,13 @@ if (wfsFeature && wfsFeature.status === 200) {
 
 // 11-12. WMS
 await capture('wms-getcapabilities', `/workspaces/${WORKSPACE}/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities`, { extension: 'xml' });
-const sw = to3857(UTAH_LON[0] + 0.5, UTAH_LAT[0] + 0.5);
-const ne = to3857(UTAH_LON[1] - 0.5, UTAH_LAT[1] - 0.5);
+// T-05 DEFECT FIX: the original BBOX applied a 0.5-degree inward margin to the
+// Utah envelope, capping north latitude at 42.1-0.5=41.6 - but every seeded
+// station sits NORTH of 41.62, so the rendered PNG was fully transparent
+// (0 non-transparent pixels; see recorded/manual-probes/probes-tiles.log).
+// Use the FULL envelope so the control stations are actually inside the map.
+const sw = to3857(UTAH_LON[0], UTAH_LAT[0]);
+const ne = to3857(UTAH_LON[1], UTAH_LAT[1]);
 await capture(
   'wms-getmap-epsg3857',
   `/workspaces/${WORKSPACE}/wms?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&LAYERS=${LAYER}&STYLES=&CRS=EPSG:3857&BBOX=${sw.x},${sw.y},${ne.x},${ne.y}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=true`,
