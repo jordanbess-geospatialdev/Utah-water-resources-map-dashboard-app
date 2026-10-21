@@ -74,10 +74,12 @@ function IndicatorCard({ indicator }: { indicator: Indicator }) {
           {indicator.exclusions.map((exclusion) => (
             <li key={exclusion.reason} style={EXCLUSION_STYLE}>
               {exclusion.reason}: {exclusion.count}
-              {exclusion.ids.length > 0 ? ` (${exclusion.ids.join(', ')})` : ''}
             </li>
           ))}
         </ul>
+        <p style={{ fontSize: 10, color: '#7a8276', margin: '4px 0 0', paddingLeft: 14 }}>
+          Exclusions are stated as class counts only — never as lists of identifiers.
+        </p>
       </details>
     </article>
   );
@@ -110,10 +112,12 @@ function ClassificationCard({ indicator }: { indicator: MeasuredVersusEstimatedI
           {indicator.exclusions.map((exclusion) => (
             <li key={exclusion.reason} style={EXCLUSION_STYLE}>
               {exclusion.reason}: {exclusion.count}
-              {exclusion.ids.length > 0 ? ` (${exclusion.ids.join(', ')})` : ''}
             </li>
           ))}
         </ul>
+        <p style={{ fontSize: 10, color: '#7a8276', margin: '4px 0 0', paddingLeft: 14 }}>
+          Exclusions are stated as class counts only — never as lists of identifiers.
+        </p>
       </details>
     </article>
   );
@@ -299,7 +303,10 @@ export function PublicOverview({
                 )}
                 <details className="stream-exclusions">
                   <summary style={{ fontSize: 12, cursor: 'pointer' }}>
-                    Streams excluded from these totals ({totals.value.streams.filter((stream) => !stream.included).length})
+                    Streams excluded from these totals (
+                    {totals.value.streams.filter((stream) => !stream.included).length +
+                      totals.value.omittedStreams.reduce((sum, omitted) => sum + omitted.count, 0)}
+                    )
                   </summary>
                   <ul style={{ margin: '4px 0 0' }}>
                     {totals.value.streams
@@ -309,6 +316,11 @@ export function PublicOverview({
                           <code>{stream.streamId}</code> ({stream.stationDisplayName}): {stream.exclusionReason}
                         </li>
                       ))}
+                    {totals.value.omittedStreams.map((omitted) => (
+                      <li key={omitted.reason} style={EXCLUSION_STYLE} data-omitted-class={omitted.reason}>
+                        {omitted.reason}: {omitted.count} (omitted with counts, never identified)
+                      </li>
+                    ))}
                   </ul>
                 </details>
               </>

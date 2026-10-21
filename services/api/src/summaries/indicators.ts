@@ -13,9 +13,12 @@
  * results").
  *
  * Status rules: only ACTIVE stations join a denominator; inactive, proposed
- * and unknown-status stations are excluded with their ids listed. A zero
- * denominator yields fraction null (never a fabricated 0/0). Unknown or
- * unclassifiable readings form a DISTINCT 'unknown' bucket, never folded
+ * and unknown-status stations are excluded as anonymous class counts (label
+ * + count only). Exclusion lists NEVER carry identifiers: they describe
+ * restricted/internal objects too, and a public indicator must not confirm
+ * the existence of any hidden object (hidden-object rule; DEFECT-Q1 fix).
+ * A zero denominator yields fraction null (never a fabricated 0/0). Unknown
+ * or unclassifiable readings form a DISTINCT 'unknown' bucket, never folded
  * into measured or estimated.
  *
  * Determinism: pure functions of the frozen fixture world and the explicit
@@ -49,10 +52,16 @@ export interface IndicatorPeriod {
   readonly description: string;
 }
 
+/**
+ * One exclusion applied to reach an indicator denominator: a public-safe
+ * CLASS LABEL and a count only — never an identifier list. Exclusions cover
+ * restricted/internal objects (e.g. an unpublished proposed gauge), whose
+ * existence a public indicator must not confirm; omitted with counts,
+ * never identified (hidden-object rule; DEFECT-Q1 fix).
+ */
 export interface IndicatorExclusion {
   readonly reason: string;
   readonly count: number;
-  readonly ids: readonly string[];
 }
 
 export interface IndicatorScope {
@@ -229,7 +238,8 @@ function scopeOf(world: SummaryWorld, systemId?: string): IndicatorScope {
 interface ScopedRows {
   readonly stations: readonly SummaryStation[];
   readonly rows: readonly ObservationRow[];
-  readonly excludedRows: readonly { reason: string; status: string; ids: readonly string[]; rowCount: number }[];
+  /** Anonymous exclusion classes: reason label + excluded-row count only (never identifiers). */
+  readonly excludedRows: readonly { reason: string; rowCount: number }[];
   readonly supersededDuplicateIds: readonly string[];
 }
 
@@ -274,6 +284,8 @@ function scopedActiveRows(world: SummaryWorld, systemId: string | undefined, sta
     i = j;
   }
 
+  // Anonymous exclusion classes: the station ids stay INTERNAL to the count
+  // derivation — the emitted class is a label + row count only (DEFECT-Q1).
   const excludedRows = [
     { reason: 'inactive stations excluded', status: 'inactive', ids: inactive },
     { reason: 'proposed stations excluded', status: 'proposed', ids: proposed },
@@ -286,8 +298,6 @@ function scopedActiveRows(world: SummaryWorld, systemId: string | undefined, sta
     );
     return {
       reason: entry.reason,
-      status: entry.status,
-      ids: entry.ids,
       rowCount: inWindow.filter((row) => streamIds.has(row.streamId)).length,
     };
   });
@@ -304,13 +314,12 @@ function rowExclusions(scoped: ScopedRows, includeDuplicateSupersession: boolean
   const exclusions: IndicatorExclusion[] = scoped.excludedRows.map((entry) => ({
     reason: entry.reason,
     count: entry.rowCount,
-    ids: entry.ids,
   }));
   if (includeDuplicateSupersession && scoped.supersededDuplicateIds.length > 0) {
+    // Count only: the superseded observation ids stay internal (DEFECT-Q1).
     exclusions.push({
       reason: 'duplicate-timestamp retransmissions superseded (latest received kept; both originals stay in the raw listing)',
       count: scoped.supersededDuplicateIds.length,
-      ids: scoped.supersededDuplicateIds,
     });
   }
   return exclusions;
@@ -367,10 +376,13 @@ export function telemetryCoverageIndicator(world: SummaryWorld, options: Telemet
   }
 
   const numerator = active.filter((station) => station.telemetry === 'telemetered' && station.streams.some((stream) => currentStations.has(stream.id))).length;
+  // Anonymous class counts only: an exclusion list never identifies the
+  // excluded stations (the proposed class can include restricted objects;
+  // DEFECT-Q1 fix - labels + counts, never ids).
   const exclusions: IndicatorExclusion[] = [
-    { reason: 'inactive stations excluded', count: inactive.length, ids: inactive },
-    { reason: 'proposed stations excluded', count: proposed.length, ids: proposed },
-    { reason: 'unknown-status stations excluded', count: unknownStatus.length, ids: unknownStatus },
+    { reason: 'inactive stations excluded', count: inactive.length },
+    { reason: 'proposed stations excluded', count: proposed.length },
+    { reason: 'unknown-status stations excluded', count: unknownStatus.length },
   ];
 
   return {

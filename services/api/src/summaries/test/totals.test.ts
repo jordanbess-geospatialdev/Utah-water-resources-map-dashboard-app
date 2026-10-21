@@ -24,6 +24,10 @@
  * name and measure neighboring points; governed water-source/site-type
  * fields place them in DIFFERENT categories and combinedVolumeAcreFeet stays
  * null - the summary never sums across categories.
+ *
+ * DEFECT-Q2 fix: the default-public projection itemizes PUBLIC streams only;
+ * restricted/internal streams are aggregated as anonymous class counts in
+ * AreaTotals.omittedStreams (omitted with counts, never identified).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -145,6 +149,7 @@ test('no double count: categories stay separate, the adjacent Hyrum stations nev
   assert.equal(all.combinedVolumeAcreFeet, null, 'a cross-category sum could double-count the same water');
   assert.equal(all.noDoubleCountPolicy, NO_DOUBLE_COUNT_POLICY);
   assert.ok(all.noDoubleCountPolicy.includes('never summed across categories'));
+  assert.deepEqual(all.omittedStreams, [], "the 'all' projection itemizes every stream: no anonymous classes");
 
   const canal = categoryOf(all, 'canal-delivery');
   const release = categoryOf(all, 'reservoir-release');
@@ -172,6 +177,7 @@ test('no double count: categories stay separate, the adjacent Hyrum stations nev
 test('golden: reservoir-release appears only with all-visibility (restricted owner stream)', () => {
   const publicView = totals();
   assert.equal(publicView.categories.find((category) => category.category === 'reservoir-release'), undefined);
+  assert.equal(publicView.streams.find((stream) => stream.streamId === 'str-hyrum-q-owner'), undefined, 'DEFECT-Q2: the restricted owner stream is never itemized publicly');
   const all = totals({ visibility: 'all' });
   const release = categoryOf(all, 'reservoir-release');
   const expected = (9.8 * (86_400 + 86_400 + 36_000) + 10.4 * 46_800) / 43_560;
@@ -179,21 +185,27 @@ test('golden: reservoir-release appears only with all-visibility (restricted own
   assert.equal(release.coverageFraction, 1);
 });
 
-test('stream inclusion reasons: 5 streams excluded with governed reasons, exactly 2 included', () => {
+test('stream inclusion reasons: public streams carry governed reasons; restricted streams are anonymous counts only (DEFECT-Q2)', () => {
   const result = totals();
   const included = result.streams.filter((stream) => stream.included).map((stream) => stream.streamId);
   assert.deepEqual(included, ['str-corinne-q', 'str-hyrum-q-public']);
+  // Only PUBLIC objects are itemized with identified exclusion rows.
   const excluded = new Map(
     result.streams
       .filter((stream) => !stream.included)
       .map((stream) => [stream.streamId, stream.exclusionReason ?? '']),
   );
-  assert.equal(excluded.size, 5);
+  assert.equal(excluded.size, 2);
   assert.match(excluded.get('str-summit-q')!, /station inactive/);
-  assert.match(excluded.get('str-ogden-q-proposed')!, /station proposed/);
-  assert.match(excluded.get('str-hyrum-q-owner')!, /not in the public projection \(restricted\)/);
   assert.match(excluded.get('str-corinne-stage')!, /dimension mismatch.*stage in ft/);
-  assert.match(excluded.get('str-diag-voltage')!, /not in the public projection \(internal\)/);
+  // Restricted/internal streams (the owner stream, the internal diagnostic
+  // stream and the restricted proposed gauge) appear ONLY as anonymous class
+  // counts - omitted with counts, never identified. The class labels the
+  // non-public layer (here: each omitted stream's station is non-public).
+  assert.deepEqual(result.omittedStreams, [
+    { reason: 'station not in the public projection (internal)', count: 1 },
+    { reason: 'station not in the public projection (restricted)', count: 2 },
+  ]);
 });
 
 test('a day with no data keeps volume null in the daily table (missing is never zero)', () => {
@@ -217,10 +229,10 @@ test('per-system area and empty-area behavior', () => {
   assert.equal(weber.outcome, 'allowed');
   if (weber.outcome === 'allowed') {
     assert.deepEqual(weber.value.categories, [], 'the only Weber station is proposed: no totals are fabricated');
-    assert.deepEqual(
-      weber.value.streams.map((stream) => [stream.streamId, stream.exclusionReason]),
-      [['str-ogden-q-proposed', 'station proposed']],
-    );
+    // DEFECT-Q2 fix: the restricted proposed gauge is not itemized - its only
+    // public trace is an anonymous class count.
+    assert.deepEqual(weber.value.streams, []);
+    assert.deepEqual(weber.value.omittedStreams, [{ reason: 'station not in the public projection (restricted)', count: 1 }]);
   }
 });
 
@@ -251,4 +263,56 @@ test('determinism: deriving the same totals twice yields identical results', () 
   const first = JSON.stringify(totals({ visibility: 'all' }));
   const second = JSON.stringify(totals({ visibility: 'all' }));
   assert.equal(first, second);
+});
+
+// ---------------------------------------------------------------------------
+// DEFECT-Q2 fix: the default-public projection carries no restricted/internal
+// stream inventory (ids, display names, properties, statuses)
+// ---------------------------------------------------------------------------
+
+/**
+ * Restricted/internal fixture objects. The owner Hyrum station's display name
+ * is deliberately NOT here: the fixture shares it with the adjacent PUBLIC
+ * station (the no-double-count trap), so the name itself is a public object.
+ */
+const RESTRICTED_IDENTIFIERS = [
+  'sta-hyrum-diversion-owner',
+  'str-hyrum-q-owner',
+  'sta-bear-lake-diagnostic',
+  'str-diag-voltage',
+  'sta-ogden-valley-proposed',
+  'str-ogden-q-proposed',
+  'Garden City Diagnostic Site',
+  'Ogden Valley Upper Proposed Gauge',
+];
+
+test('DEFECT-Q2 fix: serialized public area totals name no restricted or internal object (default and explicit public)', () => {
+  const publicResults = [
+    totals(), // default visibility = public
+    totals({ visibility: 'public' }),
+    totals({ basis: 'best-available' }),
+    totals({ start: '2026-03-10T07:00:00Z', end: '2026-03-11T07:00:00Z' }),
+  ];
+  for (const [index, result] of publicResults.entries()) {
+    const serialized = JSON.stringify(result);
+    for (const identifier of RESTRICTED_IDENTIFIERS) {
+      assert.ok(!serialized.includes(identifier), `public totals surface ${index} names restricted object ${identifier}`);
+    }
+  }
+  // Per-system areas stay clean too (Weber holds the restricted proposed gauge).
+  const bear = fixtureAreaTotals({ area: { systemId: 'sys-bear-river' }, start: GOLDEN_WINDOW.start, end: GOLDEN_WINDOW.end, basis: 'raw' });
+  const weber = fixtureAreaTotals({ area: { systemId: 'sys-weber-river' }, start: GOLDEN_WINDOW.start, end: GOLDEN_WINDOW.end, basis: 'raw' });
+  for (const [index, result] of [bear, weber].entries()) {
+    assert.equal(result.outcome, 'allowed');
+    if (result.outcome !== 'allowed') continue;
+    const serialized = JSON.stringify(result.value);
+    for (const identifier of RESTRICTED_IDENTIFIERS) {
+      assert.ok(!serialized.includes(identifier), `public system totals surface ${index} names restricted object ${identifier}`);
+    }
+  }
+  // The anonymous classes reconcile the public inventory: 4 public streams
+  // itemized + 3 restricted/internal counted anonymously = all 7 streams.
+  const statewide = totals();
+  assert.equal(statewide.streams.length, 4);
+  assert.equal(statewide.omittedStreams.reduce((sum, entry) => sum + entry.count, 0), 3);
 });
