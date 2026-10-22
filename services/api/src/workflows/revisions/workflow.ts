@@ -214,6 +214,12 @@ export function applyCorrection(
   if (denied) return denied;
 
   const type: 'correction' | 'level-advance' = input.type ?? 'correction';
+  // Review is separate from editing a best-available value. Check before
+  // replay so revoking review authority also blocks an old idempotent retry.
+  if (type === 'level-advance' || input.processingLevel === 'reviewed') {
+    const reviewDenied = authorize(store, actorId, 'review-data', observation.id, logicalKey, ctx.now, input);
+    if (reviewDenied) return reviewDenied;
+  }
   const replay = idempotencyReplay(
     store,
     logicalKey,

@@ -65,16 +65,16 @@ test('rules record author and created/updated timestamps and start as drafts', (
   assert.deepEqual(errorsOf(mismatch), ['config-family-mismatch']);
 });
 
-test('authoring is steward-gated: engineer denied capability, system-scoped commissioner denied scope', () => {
+test('authoring is steward-gated: engineer denied capability, commissioner denied rule-management capability', () => {
   const engine = createQcEngine({ world: buildTestWorld(), clock: () => NOW, fixtures: fixtureSeries() });
   const engineer = engine.authorRule(FATIMA, { ruleId: 'qc-x', family: 'range' });
   assert.ok(!engineer.ok && 'denied' in engineer, JSON.stringify(engineer));
   assert.equal(engineer.denied.status, 403);
-  assert.equal(engineer.denied.reason, 'DENY_CAPABILITY_NOT_GRANTED', 'engineer operational verbs never satisfy review-data');
+  assert.equal(engineer.denied.reason, 'DENY_CAPABILITY_NOT_GRANTED', 'engineer operational verbs never satisfy manage-qc-rules');
   const commissioner = engine.authorRule(CODY, { ruleId: 'qc-x', family: 'range' });
   assert.ok(!commissioner.ok && 'denied' in commissioner);
   assert.equal(commissioner.denied.status, 403);
-  assert.equal(commissioner.denied.reason, 'DENY_OUT_OF_SCOPE', 'QC rules are program-level: a Bear-system review-data grant does not cover them');
+  assert.equal(commissioner.denied.reason, 'DENY_CAPABILITY_NOT_GRANTED', 'measurement review does not grant QC rule management');
   assert.equal(engine.rules().length, 0);
   // Validation errors for the steward: bad id, unknown family.
   const bad = engine.authorRule(DIEGO, { ruleId: 'Not-A-Id', family: 'nonsense' });

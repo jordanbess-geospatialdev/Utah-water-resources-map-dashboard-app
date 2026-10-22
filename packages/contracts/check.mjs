@@ -30,6 +30,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspectRoleVocabulary, readRoleSources } from './role-vocabulary.mjs';
 
 const PKG = dirname(fileURLToPath(import.meta.url));
 const SCHEMA_DIR = join(PKG, 'schemas');
@@ -464,7 +465,7 @@ assert(eq([...levelIds], ['raw', 'provisional', 'reviewed', 'best-available']), 
 // ---------------------------------------------------------------- OpenAPI
 if (openapi) {
   assert(openapi.openapi === '3.1.0', 'openapi.json: must declare OpenAPI 3.1.0');
-  assert(openapi.info?.version === '0.1.0', 'openapi.json: info.version must be 0.1.0');
+  assert(openapi.info?.version === '0.1.1', 'openapi.json: info.version must be 0.1.1');
   assert(Array.isArray(openapi.servers) && openapi.servers.some((s) => s.url === '/api/v1'), 'openapi.json: servers must include "/api/v1"');
   assert(openapi.components?.securitySchemes?.sessionCookie !== undefined, 'openapi.json: sessionCookie security scheme missing');
   assert(openapi.components?.securitySchemes?.scopedToken !== undefined, 'openapi.json: scopedToken security scheme missing');
@@ -623,6 +624,36 @@ function resolveRef(doc, ref) {
   return node;
 }
 
+// ------------------------------------- runtime / wire / persistence role parity
+try {
+  const roleCheck = inspectRoleVocabulary(readRoleSources(ROOT));
+  assert(roleCheck.failures.length === 0, `assignment role vocabulary drift:\n    ${roleCheck.failures.join('\n    ')}`);
+} catch (error) {
+  assert(false, `assignment role vocabulary check failed: ${error.message}`);
+}
+
+// Supplier grants are synthesized by the workflow today, so they were absent
+// from the baseline fixtures validated above. Exercise their actual wire shape.
+const supplierGrant = {
+  id: 'contract-supplier-entitlement', principalId: 'supplier-member',
+  role: 'water-user', capabilities: ['supplier-reporting'],
+  scopeType: 'organization', scopeId: 'supplier-organization',
+  effectiveAt: '2026-01-01T00:00:00Z', expiresAt: null, status: 'active',
+  delegation: null, grantedBy: 'granting-steward', grantVersion: 1,
+};
+for (const [label, schema] of [
+  ['entitlement schema', schemas['entitlement.json']],
+  ['OpenAPI Entitlement', openapi?.components?.schemas?.Entitlement],
+  ['OpenAPI AssignmentPutRequest', openapi?.components?.schemas?.AssignmentPutRequest],
+]) {
+  assert(schema !== undefined, `${label}: role contract schema must exist`);
+  validateFixture(`${label} supplier grant`, schema, supplierGrant);
+  const issues = [];
+  evaluate(schema, { ...supplierGrant, role: 'unrecognized-role' }, label, issues);
+  assert(issues.some((issue) => issue.includes('.role:') && issue.includes('not in enum')),
+    `${label}: an unrecognized supplier role must be rejected`);
+}
+
 // ------------------------------------------------------------------ hashes
 const hashFiles = [
   'openapi.json',
@@ -633,7 +664,7 @@ for (const line of contractsHashMd.split(/\r?\n/)) {
   const m = line.match(/^\s*[|`\s]*([A-Za-z0-9._/-]+\.json)[|`\s:]+([0-9a-f]{64})/);
   if (m) mdHashes.set(m[1].replace(/^schemas\//, 'schemas/'), m[2]);
 }
-assert(contractsHashMd.includes('v0.1.0'), 'CONTRACTS-HASH.md: must be labeled version v0.1.0');
+assert(contractsHashMd.includes('Version: v0.1.1'), 'CONTRACTS-HASH.md: must be labeled version v0.1.1');
 assert(contractsHashMd.includes('2026-10-21'), 'CONTRACTS-HASH.md: must carry the publication date 2026-10-21');
 assert(contractsHashMd.includes(AGREEMENT_SENTENCE), 'CONTRACTS-HASH.md: must contain the exact consumer-agreement sentence');
 for (const rel of hashFiles) {
@@ -657,7 +688,7 @@ const opCount = Object.values(openapi?.paths ?? {}).reduce(
   0
 );
 console.log(
-  `OK @utah-water/contracts v0.1.0: ${opCount} operations, ` +
+  `OK @utah-water/contracts v0.1.1: ${opCount} operations, ` +
     `${SCHEMA_NAMES.length} schemas, 6 fixtures, ${observations.length} observations, ${revisions.length} revisions, ` +
     `${asserted} assertions passed, ${hashFiles.length} sha256 contract hashes verified (seed utah-water-fixture-v1)`
 );

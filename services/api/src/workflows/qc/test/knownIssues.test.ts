@@ -1,6 +1,6 @@
 /**
  * Known data issue tests (WD-013; FR-038; verification rows T-06/T-15):
- * recording through the review-data gate, the open/monitoring/resolved
+ * recording through the record-data-issues gate, the open/monitoring/resolved
  * lifecycle with an APPEND-ONLY resolution history, public/internal
  * visibility filtering, and the permitted export context (public exports
  * carry public issues only - byte-swept).
@@ -41,12 +41,10 @@ function seeded(clock: () => string): { svc: KnownIssueService; publicIssueId: s
   return { svc, publicIssueId: publicIssue.issue.id, internalIssueId: internalIssue.issue.id };
 }
 
-test('recording is review-data gated: engineer and researcher denied, anonymous 401', () => {
+test('recording is issue-grant gated: assigned engineer allowed, researcher denied, anonymous 401', () => {
   const svc = service(() => NOW);
   const engineer = svc.recordIssue(FATIMA, { streamId: 'str-corinne-q', interval: OUTAGE, title: 'x', visibility: 'public' });
-  assert.ok(!engineer.ok && 'status' in engineer);
-  assert.equal(engineer.status, 403);
-  assert.equal(engineer.reason, 'DENY_CAPABILITY_NOT_GRANTED');
+  assert.ok(engineer.ok, JSON.stringify(engineer));
   const researcher = svc.recordIssue(SARAH, { streamId: 'str-corinne-q', interval: OUTAGE, title: 'x', visibility: 'public' });
   assert.ok(!researcher.ok && 'status' in researcher);
   assert.equal(researcher.status, 403);
@@ -116,10 +114,10 @@ test('lifecycle: open -> monitoring -> resolved with an APPEND-ONLY resolution h
   const unknown = svc.updateStatus(DIEGO, 'issue-999999', 'monitoring', 'x');
   assert.ok(!unknown.ok);
   assert.deepEqual(unknown.errors, ['unknown-issue']);
-  // Status changes are gated too: the engineer cannot resolve.
+  // The explicitly assigned engineer can also resolve an issue in scope.
   const engineerResolve = svc.updateStatus(FATIMA, publicIssueId, 'resolved', 'x');
-  assert.ok(!engineerResolve.ok && 'status' in engineerResolve);
-  assert.equal(engineerResolve.status, 403);
+  assert.ok(engineerResolve.ok, JSON.stringify(engineerResolve));
+  assert.equal(engineerResolve.issue.resolvedBy, FATIMA);
 });
 
 test('visibility: public issues list for everyone; internal issues only through the internal read path', () => {

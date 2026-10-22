@@ -75,6 +75,7 @@ const { FinalizedLedger, finalizedContentFromReport } = await import('../../../s
 const { generateReport, fixtureReportDeps } = await import('../../../services/api/src/workflows/distribution-report/generate.ts');
 const { DEFAULT_INCLUDE } = await import('../../../services/api/src/workflows/distribution-report/types.ts');
 const { reportWorld } = await import('../../../services/api/src/workflows/distribution-report/world.ts');
+const { withEntitlement } = await import('../../../packages/policy/src/index.ts');
 const supplierReport = await import('../../../services/api/src/workflows/supplier-report/report.ts');
 const { standardSupplierWorld, supplierWorld } = await import('../../../services/api/src/workflows/supplier-report/world.ts');
 const { seriesStore } = await import('../../../services/api/src/series/load.ts');
@@ -259,7 +260,13 @@ test('finalized snapshot views carry no canary bytes and no restricted keys', ()
   );
   assert.equal(report.outcome, 'allowed');
   const ledger = new FinalizedLedger();
-  const first = ledger.finalize(reportWorld().policyWorld, {
+  const baseWorld = reportWorld().policyWorld;
+  const codyGrant = baseWorld.assignments.find((assignment) => assignment.id === 'ent-commissioner-cody');
+  // Test-only grant retains the existing byte-sweep scenario without elevating default QC users.
+  const approvalWorld = withEntitlement(baseWorld, codyGrant.id, {
+    capabilities: [...codyGrant.capabilities, 'finalize-accounting'],
+  });
+  const first = ledger.finalize(approvalWorld, {
     systemId: 'sys-bear-river',
     period: { kind: 'calendar-year', year: 2026 },
     decisionId: null,

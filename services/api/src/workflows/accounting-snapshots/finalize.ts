@@ -11,18 +11,15 @@
  * transaction."
  *
  * Mechanics delivered here:
- * - FINALIZE AUTHORITY (approval-gated): finalize and reopen are gated by
- *   the shared entitlement engine, action review-data on the system policy
- *   object. 'review-data' is satisfied by an explicit review-data grant
- *   (an explicitly granted reviewer: the fixture commissioner Cody on Bear
- *   River, the deputy Ana inside her delegation window) or by
- *   statewide-administration (the steward Diego). The actor, the satisfying
- *   path and the assignment version are recorded on every finalized record.
+ * - FINALIZE AUTHORITY: finalize and reopen require an explicit
+ *   finalize-accounting grant on the system through the shared entitlement
+ *   engine. QC review and statewide administration confer no approval
+ *   authority. The actor, capability and assignment version are recorded
+ *   on every finalized record.
  *
- *   OWNER-RATIFICATION-PENDING: mapping finalize/reopen onto the review-data
- *   row of the PROPOSED authorization matrix is a decision this module
- *   flags for owner ratification (the matrix itself is pending stakeholder
- *   ratification; no fixture grant names a finalize-specific capability).
+ *   OWNER-RATIFICATION-PENDING: accountable roles and actual assignments
+ *   still require program-owner ratification. Demo grants are examples,
+ *   not evidence of an approved production assignment.
  *   See FINALIZE_AUTHORITY_RULE echoed on every record.
  *
  * - OPTIMISTIC CONCURRENCY: every finalize/supersede request carries the
@@ -52,7 +49,7 @@ import { canonicalize, sha256Hex } from '../distribution-report/generate.ts';
 import {
   deepFreeze,
   type FinalizedAccounting,
-  type FinalizedAuthorityEvidence,
+  type FinalizeAuthorityEvidence,
   type FinalizedContent,
   type FinalizedRecordView,
   type LedgerEvent,
@@ -63,16 +60,15 @@ import { periodKeyOf } from './periods.ts';
 
 /** OWNER-RATIFICATION-PENDING: the finalize/reopen authority rule, recorded on every record. */
 export const FINALIZE_AUTHORITY_RULE =
-  'finalize/reopen requires review-data on the system object (the statewide steward via statewide-administration, or an explicitly granted reviewer) - RULE PENDING OWNER RATIFICATION' as const;
+  'finalize/reopen requires an explicit finalize-accounting grant on the system object; QC review and general administration do not grant approval - ASSIGNMENTS PENDING OWNER RATIFICATION' as const;
 
-const FINALIZE_ACTION: Capability = 'review-data';
-const STATEWIDE_ACTION: Capability = 'statewide-administration';
+const FINALIZE_ACTION: Capability = 'finalize-accounting';
 
 // ---------------------------------------------------------------------------
 // Authority (policy engine; approval-gated, owner-ratification-pending)
 // ---------------------------------------------------------------------------
 
-export type FinalizeAuthorityResult = { outcome: 'authorized'; value: FinalizedAuthorityEvidence } | DomainDenial;
+export type FinalizeAuthorityResult = { outcome: 'authorized'; value: FinalizeAuthorityEvidence } | DomainDenial;
 
 /** Hidden-object denial mapping, mirroring distribution-report/scope.ts. */
 function mapDenial(systemId: string, policy: Decision): DomainDenial {
@@ -108,7 +104,7 @@ function mapDenial(systemId: string, policy: Decision): DomainDenial {
 
 /**
  * Gate one finalize/reopen actor. OWNER-RATIFICATION-PENDING: the
- * review-data mapping is documented above; the engine decides, this
+ * assignment policy is documented above; the engine decides, this
  * function only records HOW authority was satisfied.
  */
 export function checkFinalizeAuthority(
@@ -124,14 +120,11 @@ export function checkFinalizeAuthority(
   const principal = principalId ? (world.principals[principalId] ?? null) : null;
   const decision = evaluate({ principal, action: FINALIZE_ACTION, object: { kind: 'system', id: systemId } }, world, now);
   if (decision.effect !== 'allow') return mapDenial(systemId, decision);
-  // Which satisfying path: statewide administration (the steward) or an
-  // explicit review-data grant (granted reviewer / deputy).
-  const statewide = evaluate({ principal, action: STATEWIDE_ACTION, object: { kind: 'system', id: systemId } }, world, now);
   return {
     outcome: 'authorized',
     value: {
       actorId: principalId ?? 'anonymous',
-      via: statewide.effect === 'allow' ? 'statewide-administration' : 'review-data',
+      via: FINALIZE_ACTION,
       assignmentVersion: decision.assignmentVersion,
       rule: FINALIZE_AUTHORITY_RULE,
     },
@@ -230,7 +223,7 @@ export class FinalizedLedger {
     return this.slots.get(periodKey)?.at(-1) ?? null;
   }
 
-  private buildRecord(request: FinalizeRequest, authority: FinalizedAuthorityEvidence, supersedes: string | null, reason: string | null): FinalizedAccounting {
+  private buildRecord(request: FinalizeRequest, authority: FinalizeAuthorityEvidence, supersedes: string | null, reason: string | null): FinalizedAccounting {
     const periodKey = periodKeyOf(request.systemId, request.period);
     const contentHash = sha256Hex(
       canonicalize({
@@ -262,7 +255,7 @@ export class FinalizedLedger {
   }
 
   /** Authority + optimistic-guard check shared by finalize and finalizeSuperseding. */
-  private guard(world: PolicyWorld, request: FinalizeRequest): { outcome: 'ok'; authority: FinalizedAuthorityEvidence } | FinalizeOutcome {
+  private guard(world: PolicyWorld, request: FinalizeRequest): { outcome: 'ok'; authority: FinalizeAuthorityEvidence } | FinalizeOutcome {
     const authority = checkFinalizeAuthority(world, request.actorId, request.systemId, request.now);
     if (authority.outcome === 'denied') return authority;
     const periodKey = periodKeyOf(request.systemId, request.period);

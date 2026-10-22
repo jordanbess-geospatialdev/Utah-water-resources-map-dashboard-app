@@ -50,6 +50,10 @@ const OPERATIONAL = new Set([
   'edit-permitted-site-fields',
   'create-sites',
   'review-data',
+  'record-data-issues',
+  'manage-thresholds',
+  'approve-rating-curves',
+  'finalize-accounting',
   'field-visits',
   'view-internal-diagnostics',
   'generate-reports',
@@ -64,7 +68,7 @@ const INTERNAL_READERS = new Set(['view-internal-diagnostics', 'edit-site-metada
  * Verbs the steward's statewide-administration grant satisfies: the matrix
  * column "Statewide..." for Diego (view-restricted-details, enter-readings,
  * revise-best-available, edit-site-metadata, create-sites, review-data,
- * manage-vocabulary, manage-users, configure-ingestion, withdraw-raw,
+ * manage-vocabulary, manage-users, configure-ingestion, ordinary QC,
  * generate-reports, create-exports, read-approved-datasets,
  * view-internal-diagnostics, statewide-administration itself) PLUS
  * field-visits: CAPABILITY_SATISFIES also lets statewide-administration
@@ -82,7 +86,9 @@ const STATEWIDE_SATISFIES = new Set([
   'manage-users',
   'manage-assignments',
   'configure-ingestion',
-  'withdraw-raw',
+  'record-data-issues',
+  'manage-thresholds',
+  'manage-qc-rules',
   'generate-reports',
   'create-exports',
   'read-approved-datasets',
@@ -151,7 +157,7 @@ const LIFECYCLE = {
 
 function oracleLifecycleClass(action) {
   if (['browse-published', 'view-restricted-details', 'view-internal-diagnostics', 'read-approved-datasets', 'generate-reports', 'create-exports'].includes(action)) return 'read';
-  if (['enter-readings', 'revise-best-available', 'review-data', 'withdraw-raw', 'field-visits', 'create-sites'].includes(action)) return 'mutate';
+  if (['enter-readings', 'revise-best-available', 'review-data', 'withdraw-raw', 'record-data-issues', 'manage-thresholds', 'manage-qc-rules', 'approve-rating-curves', 'finalize-accounting', 'field-visits', 'create-sites'].includes(action)) return 'mutate';
   if (['edit-site-metadata', 'edit-permitted-site-fields'].includes(action)) return 'draft-edit';
   return 'admin';
 }
@@ -217,6 +223,11 @@ const ACTIONS = [
     'edit-permitted-site-fields',
     'create-sites',
     'review-data',
+    'record-data-issues',
+    'manage-thresholds',
+    'manage-qc-rules',
+    'approve-rating-curves',
+    'finalize-accounting',
     'manage-vocabulary',
     'manage-users',
     'manage-assignments',

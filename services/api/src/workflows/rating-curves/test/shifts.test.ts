@@ -12,7 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createRatingCurveStore } from '../store.ts';
+import { createRatingCurveStore } from './approvalGrants.ts';
 import { convertStage } from '../curves.ts';
 import {
   approveShiftVersion,

@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { seriesStore } from '../../../series/load.ts';
 import { createRevisionStore } from '../../revisions/store.ts';
 import { createRatingCurveStore } from '../../rating-curves/store.ts';
-import { reportWorld } from '../../distribution-report/world.ts';
+import { accountingTestWorld } from './approvalGrants.ts';
 import { decisionBytes, recordDecision } from '../decisions.ts';
 import { FinalizedLedger, finalizedContentFromDecision } from '../finalize.ts';
 import { buildSupplementalContext } from '../supplemental.ts';
@@ -24,7 +24,7 @@ import type { PeriodSpec } from '../types.ts';
 const NOW = '2026-03-09T07:00:00Z';
 const CODY = 'principal-cody-commissioner';
 const DIEGO = 'principal-diego-steward';
-const WORLD = reportWorld().policyWorld;
+const WORLD = accountingTestWorld();
 
 const PERIODS: readonly PeriodSpec[] = [
   { kind: 'calendar-year', year: 2026 },

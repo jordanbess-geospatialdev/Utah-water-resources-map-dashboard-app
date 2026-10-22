@@ -9,8 +9,8 @@
  * - author, approval state (draft -> approved -> superseded) and provenance
  *   retained; supersession closes the prior interval without deleting it;
  * - authoring gated by `edit-site-metadata` (assigned engineer / steward),
- *   approval gated by `review-data` (data owner / steward) via the policy
- *   engine - authors cannot self-approve;
+ *   approval gated by explicit `approve-rating-curves` via the policy
+ *   engine; authoring and QC review grants do not grant approval;
  * - overlap rejection: at most one shift version covers any instant.
  *
  * The combined conversion (convertWithShift) carries BOTH lineage ids: the

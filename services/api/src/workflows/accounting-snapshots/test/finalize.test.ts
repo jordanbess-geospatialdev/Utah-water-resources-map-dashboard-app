@@ -21,11 +21,13 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { withEntitlement } from '../../../../../../packages/policy/src/index.ts';
 
 import { seriesStore } from '../../../series/load.ts';
 import { createRevisionStore } from '../../revisions/store.ts';
 import { createRatingCurveStore } from '../../rating-curves/store.ts';
 import { reportWorld } from '../../distribution-report/world.ts';
+import { accountingTestWorld } from './approvalGrants.ts';
 import { generateReport } from '../../distribution-report/generate.ts';
 import { DEFAULT_INCLUDE } from '../../distribution-report/types.ts';
 import { FinalizedLedger, checkFinalizeAuthority, finalizedContentFromDecision, finalizedContentFromReport, type FinalizeRequest } from '../finalize.ts';
@@ -45,7 +47,41 @@ const SARAH = 'principal-sarah-researcher';
 const BEAR = 'sys-bear-river';
 const CY2026: PeriodSpec = { kind: 'calendar-year', year: 2026 };
 
-const WORLD = reportWorld().policyWorld;
+const WORLD = accountingTestWorld();
+
+test('QC review and broad administration alone cannot finalize or reopen accounting', () => {
+  const base = reportWorld().policyWorld;
+  const stewardGrant = base.assignments.find((assignment) => assignment.id === 'ent-steward-diego')!;
+  const unapproved = withEntitlement(base, stewardGrant.id, {
+    capabilities: stewardGrant.capabilities.filter((capability) => capability !== 'finalize-accounting'),
+  });
+  for (const actorId of [CODY, ANA, DIEGO]) {
+    const ledger = new FinalizedLedger();
+    const result = ledger.finalize(unapproved, finalizeRequest(actorId, contentOf(1, 'no approval grant'), null));
+    assert.equal(result.outcome, 'denied', actorId);
+    if (result.outcome === 'denied') assert.equal(result.policyReason, 'DENY_CAPABILITY_NOT_GRANTED');
+    assert.equal(ledger.events.length, 0);
+
+    const seeded = ledger.finalize(WORLD, finalizeRequest(DIEGO, contentOf(1, 'approved'), null));
+    assert.equal(seeded.outcome, 'finalized');
+    if (seeded.outcome !== 'finalized') continue;
+    const before = ledger.storedBytes(seeded.record.id);
+    const denied = ledger.finalizeSuperseding(unapproved, {
+      ...finalizeRequest(actorId, contentOf(2, 'unapproved replacement'), seeded.record.id), reason: 'review is not finalization',
+    });
+    assert.equal(denied.outcome, 'denied');
+    assert.equal(ledger.list().length, 1);
+    assert.equal(ledger.events.length, 1);
+    assert.equal(ledger.storedBytes(seeded.record.id), before);
+  }
+});
+
+test('revoking an explicit finalization grant denies the next request', () => {
+  const revoked = withEntitlement(WORLD, 'ent-commissioner-cody', { status: 'revoked' });
+  const result = checkFinalizeAuthority(revoked, CODY, BEAR, NOW);
+  assert.equal(result.outcome, 'denied');
+  if (result.outcome === 'denied') assert.equal(result.policyReason, 'DENY_ASSIGNMENT_REVOKED');
+});
 
 function contentOf(scale: number, note: string): FinalizedContent {
   return {
@@ -89,22 +125,22 @@ function finalizeRequest(actorId: string | null, content: FinalizedContent, expe
 // Authority matrix (OWNER-RATIFICATION-PENDING - see finalize.ts)
 // ---------------------------------------------------------------------------
 
-test('the steward finalizes via statewide-administration; the granted reviewer via review-data', () => {
+test('explicit finalization grants authorize the steward, commissioner and delegated deputy', () => {
   const steward = checkFinalizeAuthority(WORLD, DIEGO, BEAR, NOW);
   assert.equal(steward.outcome, 'authorized');
   if (steward.outcome === 'authorized') {
-    assert.equal(steward.value.via, 'statewide-administration');
+    assert.equal(steward.value.via, 'finalize-accounting');
     assert.equal(steward.value.actorId, DIEGO);
     assert.ok(steward.value.rule.includes('PENDING OWNER RATIFICATION'));
   }
   const commissioner = checkFinalizeAuthority(WORLD, CODY, BEAR, NOW);
   assert.equal(commissioner.outcome, 'authorized');
-  if (commissioner.outcome === 'authorized') assert.equal(commissioner.value.via, 'review-data');
+  if (commissioner.outcome === 'authorized') assert.equal(commissioner.value.via, 'finalize-accounting');
 
   // The deputy is an explicitly granted reviewer INSIDE her delegation window.
   const deputy = checkFinalizeAuthority(WORLD, ANA, BEAR, NOW);
   assert.equal(deputy.outcome, 'authorized');
-  if (deputy.outcome === 'authorized') assert.equal(deputy.value.via, 'review-data');
+  if (deputy.outcome === 'authorized') assert.equal(deputy.value.via, 'finalize-accounting');
 
   // Outside the delegation window the same grant denies: the window, not the
   // role label, decides.
@@ -427,7 +463,7 @@ test('finalize content derived from a WD-025 report pins the report id and its c
   if (a.outcome === 'finalized' && b.outcome === 'finalized') {
     assert.equal(a.record.contentHash, b.record.contentHash);
     assert.notEqual(a.record.id, b.record.id); // the RECORD id also binds actor+time
-    assert.equal(a.record.authority.via, 'review-data');
-    assert.equal(b.record.authority.via, 'statewide-administration');
+    assert.equal(a.record.authority.via, 'finalize-accounting');
+    assert.equal(b.record.authority.via, 'finalize-accounting');
   }
 });

@@ -7,7 +7,7 @@
 // database/qualification/queries.sql).
 //
 // Checks
-//   (a) migration filenames match V<yyyyMMddHHmm>__WD-003_*.sql
+//   (a) migration filenames match V<yyyyMMddHHmm>__WD-<number>_*.sql
 //   (b) every CREATE TABLE declares a PRIMARY KEY (PARTITION OF children are
 //       exempt: they inherit the parent's constraints)
 //   (c) publication views declare explicit column lists and none of the
@@ -32,6 +32,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inspectRoleVocabulary, readRoleSources } from '../packages/contracts/role-vocabulary.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = join(HERE, 'migrations');
@@ -120,10 +121,22 @@ const migrations = migrationFiles.map((f) => ({
 // (a) migration filenames
 // ---------------------------------------------------------------------------
 {
-  const pattern = /^V\d{8}(0[0-9]|1[0-2])([0-5]\d)__WD-003_[A-Za-z0-9_]+\.sql$/;
+  const pattern = /^V\d{8}([01][0-9]|2[0-3])([0-5]\d)__WD-\d+_[A-Za-z0-9_]+\.sql$/;
   const bad = migrationFiles.filter((f) => !pattern.test(f));
-  if (bad.length) fail('migrations/filenames', `must match V<yyyyMMddHHmm>__WD-003_*.sql:\n  ${bad.join('\n  ')}`);
-  pass('migrations/filenames', `${migrationFiles.length} migrations match V<yyyyMMddHHmm>__WD-003_*.sql`);
+  if (bad.length) fail('migrations/filenames', `must match V<yyyyMMddHHmm>__WD-<number>_*.sql:\n  ${bad.join('\n  ')}`);
+  pass('migrations/filenames', `${migrationFiles.length} migrations match V<yyyyMMddHHmm>__WD-<number>_*.sql`);
+}
+
+// Effective assignment roles must match runtime grants and both wire schemas.
+// This is a static DDL check; it does not claim the migrations ran in PostgreSQL.
+{
+  try {
+    const roles = inspectRoleVocabulary(readRoleSources(join(HERE, '..')));
+    if (roles.failures.length) fail('assignment/role-vocabulary', roles.failures.join('\n  '));
+    pass('assignment/role-vocabulary', `${roles.roles.length} role families agree across runtime, schemas and ordered migration checks`);
+  } catch (error) {
+    fail('assignment/role-vocabulary', error.message);
+  }
 }
 
 // ---------------------------------------------------------------------------

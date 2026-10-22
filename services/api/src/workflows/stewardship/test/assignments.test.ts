@@ -10,7 +10,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluate, withPrincipal, type Decision, type PolicyWorld } from '../../../../../../packages/policy/src/index.ts';
+import { evaluate, withPrincipal, type Capability, type Decision, type PolicyWorld } from '../../../../../../packages/policy/src/index.ts';
 import { createAssignmentService, type AssignmentService } from '../assignments.ts';
 import { ANA, CODY, DIEGO, FATIMA, LEE, NOW, PRIYA, buildTestWorld } from './helpers.ts';
 
@@ -195,4 +195,22 @@ test('determinism: identical mutation sequence run twice produces identical seri
     return svc.serialize();
   };
   assert.equal(scenario(), scenario());
+});
+
+
+test('WD-027: an engineer can receive scoped review authority without approval or withdrawal powers', () => {
+  const svc = service();
+  const grant = svc.grant(DIEGO, {
+    principalId: FATIMA, role: 'engineer', capabilities: ['review-data'],
+    scopeType: 'system', scopeId: 'sys-bear-river', effectiveAt: NOW,
+  });
+  assert.ok(grant.ok, JSON.stringify(grant));
+  const ask = (action: Capability, id = 'sta-bear-corinne') => evaluate({
+    principal: grant.world.principals[FATIMA]!, action, object: { kind: 'station', id },
+  }, grant.world, NOW);
+  assert.equal(ask('review-data').effect, 'allow');
+  assert.equal(ask('review-data', 'sta-ogden-valley-proposed').reason, 'DENY_OUT_OF_SCOPE');
+  for (const action of ['approve-rating-curves', 'finalize-accounting', 'withdraw-raw', 'manage-qc-rules'] as const) {
+    assert.equal(ask(action).effect, 'deny', action);
+  }
 });

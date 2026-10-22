@@ -28,6 +28,7 @@ const { createRevisionStore } = await import('../../../services/api/src/workflow
 const { createRatingCurveStore } = await import('../../../services/api/src/workflows/rating-curves/store.ts');
 const { reconstructAsOf, serializeAsOfPointResult } = await import('../../../services/integrations/r2/asof/asof.ts');
 const { seriesStore } = await import('../../../services/api/src/series/load.ts');
+const { withEntitlement } = await import('../../../packages/policy/src/index.ts');
 
 const BEAR = 'sys-bear-river';
 const DIEGO = 'principal-diego-steward';
@@ -35,7 +36,12 @@ const CODY = 'principal-cody-commissioner';
 const FATIMA = 'principal-fatima-engineer';
 const NOW = '2026-03-09T07:00:00Z';
 const LATER = '2026-06-01T00:00:00Z';
-const WORLD = reportWorld().policyWorld;
+const BASE_WORLD = reportWorld().policyWorld;
+const codyGrant = BASE_WORLD.assignments.find((assignment) => assignment.id === 'ent-commissioner-cody');
+// Test-only accounting assignment: QC review alone does not finalize.
+const WORLD = withEntitlement(BASE_WORLD, codyGrant.id, {
+  capabilities: [...codyGrant.capabilities, 'finalize-accounting'],
+});
 
 const CY2026 = { kind: 'calendar-year', year: 2026 };
 const WY2026 = { kind: 'water-year', year: 2026 };

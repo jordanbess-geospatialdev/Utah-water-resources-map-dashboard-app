@@ -11,13 +11,12 @@
  *   system, or the statewide steward). The fixture world makes Fatima
  *   (Bear River engineer) an author, Priya (Weber River engineer) an
  *   out-of-scope author, and Sarah/anonymous non-authors.
- * - APPROVING a version (draft -> approved) is a data-owner act: capability
- *   `review-data` (matrix row "Review data and change processing status" -
- *   assigned owner side or statewide steward). In the fixture world that is
- *   Cody (Bear River commissioner, the data owner side) and Diego
- *   (statewide steward via statewide-administration); Ana may approve only
- *   inside her deputy delegation window; the authoring engineer Fatima
- *   deliberately holds NO review-data grant, so authors cannot self-approve.
+ * - APPROVING a version (draft -> approved) requires an explicit scoped
+ *   `approve-rating-curves` grant. QC review and general administration do
+ *   not confer approval authority. Deputy grants retain their delegation
+ *   window. The default authoring engineer has no approval grant.
+ *   Accountable approver roles and production assignments remain pending
+ *   program-owner ratification; fixtures demonstrate the separate actions.
  *
  * Check order per mutation (exercised by the suites):
  *  1. resolve the stream                   -> 404 NOT_FOUND;
@@ -66,7 +65,7 @@ import type {
 /** Authoring verb: measurement-method configuration on a station. */
 export const AUTHOR_CURVE_CAPABILITY: Capability = 'edit-site-metadata';
 /** Approval verb: the data-owner / steward gate for draft -> approved. */
-export const APPROVE_CURVE_CAPABILITY: Capability = 'review-data';
+export const APPROVE_CURVE_CAPABILITY: Capability = 'approve-rating-curves';
 
 /** The only governed unit pair for stage -> discharge conversion. */
 export const STAGE_DISCHARGE_UNIT_PAIR = { fromUnitId: 'ft', toUnitId: 'cfs' } as const;

@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
-import { createRatingCurveStore } from '../store.ts';
+import { createRatingCurveStore } from './approvalGrants.ts';
 import { approveCurveVersion, createCurveVersion, supersedeCurveVersion, convertStage } from '../curves.ts';
 import { approveShiftVersion, createShiftVersion, supersedeShiftVersion } from '../shifts.ts';
 import { createRevisionStore } from '../../revisions/store.ts';

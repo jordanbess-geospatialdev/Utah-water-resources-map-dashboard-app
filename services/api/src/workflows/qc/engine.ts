@@ -7,10 +7,10 @@
  * - AUTHORING: rules are versioned (author, createdAt, updatedAt, status
  *   draft/test/promoted). Authoring and revising are STEWARD-ONLY governance
  *   mutations: every call goes through the WD-014 steward gate
- *   (gateAct -> @utah-water/policy evaluate, action `review-data` against a
- *   statewide QC governance object), never a role-label check. A system-
- * scoped review-data holder (e.g. the Bear River commissioner) is correctly
- * DENIED out of scope: QC rules are program-level configurations.
+ *   (gateAct -> @utah-water/policy evaluate, action `manage-qc-rules` against a
+ *   statewide QC governance object), never a role-label check. A system-scoped
+ *   manage-qc-rules grant is denied out of scope: QC rules are program-level
+ *   configurations. Measurement reviewers do not inherit this capability.
  * - ISOLATED EXECUTION: every rule evaluation runs inside its own try/catch.
  *   A rule that throws records a FAILED run result (rule id, version, error
  *   message) and NEVER stops the other rules in the same run - tested with an
@@ -180,7 +180,7 @@ export function createQcEngine(deps: QcEngineDeps): QcEngine {
 
   return {
     authorRule(principalId, input) {
-      const verdict = gate(principalId, 'review-data', qcRootObject().id);
+      const verdict = gate(principalId, 'manage-qc-rules', qcRootObject().id);
       if (!verdict.ok) return { ok: false, denied: verdict };
       const errors: AuthorErrorCode[] = [];
       if (!RULE_ID_PATTERN.test(input?.ruleId ?? '')) errors.push('bad-rule-id');
@@ -207,7 +207,7 @@ export function createQcEngine(deps: QcEngineDeps): QcEngine {
 
     reviseRule(principalId, ruleId, config, notes) {
       const existing = versionsOf(ruleId);
-      const verdict = gate(principalId, 'review-data', ruleObject(ruleId).id);
+      const verdict = gate(principalId, 'manage-qc-rules', ruleObject(ruleId).id);
       if (!verdict.ok) return { ok: false, denied: verdict };
       const errors: ('unknown-rule' | 'config-family-mismatch')[] = [];
       if (existing.length === 0) errors.push('unknown-rule');
@@ -232,7 +232,7 @@ export function createQcEngine(deps: QcEngineDeps): QcEngine {
 
     testRule(principalId, ruleId, version) {
       const target = version === undefined ? latestOf(ruleId) : versionsOf(ruleId).find((candidate) => candidate.version === version) ?? null;
-      const verdict = gate(principalId, 'review-data', ruleObject(ruleId).id);
+      const verdict = gate(principalId, 'manage-qc-rules', ruleObject(ruleId).id);
       if (!verdict.ok) return { ok: false, denied: verdict };
       if (!target) return { ok: false, errors: ['unknown-rule'] as const };
 
@@ -248,7 +248,7 @@ export function createQcEngine(deps: QcEngineDeps): QcEngine {
 
     promoteRule(principalId, ruleId, version) {
       const target = version === undefined ? latestOf(ruleId) : versionsOf(ruleId).find((candidate) => candidate.version === version) ?? null;
-      const verdict = gate(principalId, 'review-data', ruleObject(ruleId).id);
+      const verdict = gate(principalId, 'manage-qc-rules', ruleObject(ruleId).id);
       if (!verdict.ok) return { ok: false, denied: verdict };
       if (!target) return { ok: false, errors: ['unknown-rule'] as const };
       if (target.status === 'promoted') return { ok: false, errors: ['already-promoted'] as const };

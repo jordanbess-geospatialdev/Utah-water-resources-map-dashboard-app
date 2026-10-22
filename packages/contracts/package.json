@@ -2,8 +2,8 @@
   "name": "@utah-water/contracts",
   "private": true,
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "scripts": {
-    "test": "node check.mjs"
+    "test": "node check.mjs && node --test test/*.test.mjs"
   }
 }

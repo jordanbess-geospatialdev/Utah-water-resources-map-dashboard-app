@@ -51,7 +51,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createRatingCurveStore, SEED_CURVE_COEFFICIENTS } from '../store.ts';
+import { SEED_CURVE_COEFFICIENTS } from '../store.ts';
+import { createRatingCurveStore } from './approvalGrants.ts';
 import { convertStage } from '../curves.ts';
 import { approveShiftVersion, convertWithShift, createShiftVersion } from '../shifts.ts';
 import type { WorkflowContext } from '../types.ts';

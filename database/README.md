@@ -24,10 +24,11 @@ only required extension. If a qualified TimescaleDB deployment exists, the
 documented conversion path and its trigger conditions are in
 [`qualification/TIMESCALE-ALTERNATIVE.md`](qualification/TIMESCALE-ALTERNATIVE.md).
 
-**No live database was accessed while producing this package.** Every SQL
-artifact here is authored, statically gated and pending execution under the
-qualification gate; query plans, view proofs and role grants are
-authored-but-not-executed until that gate runs.
+**No existing or production database was accessed.** Full-schema query plans,
+view proofs and database-role grants remain pending execution under the
+qualification gate. WD-027's assignment-role migration passed a minimal-table
+regression on disposable PostgreSQL 18.6; this does not qualify the full PostGIS
+deployment.
 
 ## Running the qualification queries (read-only)
 
@@ -58,14 +59,16 @@ sections 2-3 on a disposable seeded database (below).
 | `migrations/V202610211200__WD-003_core_model.sql` | Core model: vocabulary, systems/groups, stations (UUID PK, PostGIS Point 4326, external-ID mapping, visibility, version), datastreams, device deployments, immutable monthly-partitioned originals with the `(stream_id, observed_time, source_event_id)` logical-key unique index, append-only revisions with optimistic version, rating curves/shifts, site visits/attachments, QC rules/results, assignments, audit events, transactional outbox |
 | `migrations/V202610211201__WD-003_publication_views.sql` | SELECT-only publication layer: `v_public_stations`, `v_public_station_summary` (explicit column lists; restricted fields absent by construction) and the empty `v_cohort_water_owners` stub |
 | `migrations/V202610211202__WD-003_roles.sql` | `neoserver_pub` / `app_read` / `app_write` / `app_migrate` role separation; migration operators alone hold DDL |
+| `migrations/V202610211203__WD-027_assignment_roles.sql` | Aligns assignment role CHECK with the runtime and wire contracts, including public and water-user; capability and approval rules are unchanged |
 | `qualification/queries.sql` | Read-only qualification pack (see above) |
+| `qualification/assignment-roles.sql` | WD-027 executable role-migration regression; creates a minimal table in a new disposable database |
 | `qualification/TIMESCALE-ALTERNATIVE.md` | TimescaleDB alternative record (ADR-05) |
 | `load-fixtures.mjs` | Zero-dependency deterministic fixture loader (stdout SQL) |
 | `check.mjs` + `package.json` | Static gate run by `pnpm test` inside `database/` |
 | `../fixtures/database/expected-row-counts.json` | Exact per-table INSERT counts the loader must produce |
 
 Migrations are append-only (repository gate `node scripts/gate.mjs migrations`);
-never edit a merged file, always add `V<yyyyMMddHHmm>__WD-003_*.sql`. Monthly
+never edit a merged file, always add `V<yyyyMMddHHmm>__WD-<number>_*.sql`. Monthly
 observation partitions are added the same way (a `DEFAULT` partition currently
 catches strays as an alerting signal, not a data path).
 
@@ -75,6 +78,7 @@ catches strays as an alerting signal, not a data path).
 psql "<disposable-db>" -v ON_ERROR_STOP=1 -f database/migrations/V202610211200__WD-003_core_model.sql
 psql "<disposable-db>" -v ON_ERROR_STOP=1 -f database/migrations/V202610211201__WD-003_publication_views.sql
 psql "<disposable-db>" -v ON_ERROR_STOP=1 -f database/migrations/V202610211202__WD-003_roles.sql
+psql "<disposable-db>" -v ON_ERROR_STOP=1 -f database/migrations/V202610211203__WD-027_assignment_roles.sql
 node database/load-fixtures.mjs | psql "<disposable-db>" -v ON_ERROR_STOP=1 -f -
 ```
 
@@ -85,7 +89,7 @@ NOTHING`). Record identifiers are UUIDv5 values derived from a fixed namespace
 (`9d1c0a44-6f7b-4a9e-8b2d-3c5f0e7a1b68`) and the fixture key, so a re-run
 converges; changing the namespace re-keys every derived identifier.
 `fixtures/database/expected-row-counts.json` pins the exact per-table counts
-(165 INSERTs across 21 seeded tables; 8 further tables exist with zero fixture
+(172 INSERTs across 21 seeded tables; 8 further tables exist with zero fixture
 rows).
 
 ## Static gate
@@ -101,7 +105,16 @@ explicit column lists containing none of the forbidden columns (`gate_code`,
 regex scan across all migration SQL confining those names to the private
 `water.station_internal_detail` table; and the loader's emitted counts matching
 `expected-row-counts.json` exactly across a deterministic double run. Node
-built-ins only - the package declares no dependencies.
+built-ins only - the package declares no dependencies. The assignment-role check
+compares the runtime RoleFamily and grant validator with JSON Schema, both OpenAPI
+assignment shapes, and the effective CHECK after applying migration DDL in order.
+The static reader fails on unsupported role DDL and preserves multiple active
+checks, so adding a broad constraint without removing a narrow one cannot pass.
+This verifies source consistency. To repeat the executed WD-027 migration check,
+run `psql -X -v ON_ERROR_STOP=1 -f database/qualification/assignment-roles.sql`
+against a **new disposable database**. It refuses an existing `water` schema,
+then verifies preserved assignments, newly accepted roles and unknown-role
+rejection. Full-schema deployment qualification remains required.
 
 ## Roles and provisioning
 

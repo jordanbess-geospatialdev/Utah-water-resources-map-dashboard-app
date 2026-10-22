@@ -27,8 +27,9 @@
  *
  * - THRESHOLD SETS are versioned (author, created/updated, status) and
  *   SCOPED (system or stream). Authoring/promotion is gated through the
- *   policy engine (`review-data` on the scope anchor), so a system-scoped
- *   reviewer may manage sets inside their system while an engineer may not.
+ *   policy engine (`manage-thresholds` on the scope anchor), so a system-scoped
+ *   holder may manage sets inside their system. An engineer needs that
+ *   explicit grant; ordinary measurement review is insufficient.
  * - INDICATORS always carry a SYMBOL and a TEXT label plus severity -
  *   never color alone. A point matching several levels reports only its
  *   highest severity (the 9500 cfs spike is a critical spike, not a warn).
@@ -318,7 +319,7 @@ export function createThresholdService(deps: PolicyDeps): ThresholdService {
     createThresholdSet(principalId, input) {
       const anchor = input?.scope ? scopeAnchor(deps, input.scope) : null;
       const verdict = anchor
-        ? gateAct({ world: withExtraObjects(deps.world, [anchor]), clock: deps.clock, policy: deps.policy }, principalId, 'review-data', { kind: anchor.kind, id: anchor.id })
+        ? gateAct({ world: withExtraObjects(deps.world, [anchor]), clock: deps.clock, policy: deps.policy }, principalId, 'manage-thresholds', { kind: anchor.kind, id: anchor.id })
         : null;
       if (verdict && !verdict.ok) return { ok: false, status: verdict.status, reason: verdict.reason, detail: verdict.decision.detail ?? '', decision: verdict.decision };
       const errors: ThresholdErrorCode[] = [];
@@ -350,7 +351,7 @@ export function createThresholdService(deps: PolicyDeps): ThresholdService {
       const existing = versionsOf(id);
       const anchor = existing[0] ? scopeAnchor(deps, existing[0].scope) : null;
       const verdict = anchor
-        ? gateAct({ world: withExtraObjects(deps.world, [anchor]), clock: deps.clock, policy: deps.policy }, principalId, 'review-data', { kind: anchor.kind, id: anchor.id })
+        ? gateAct({ world: withExtraObjects(deps.world, [anchor]), clock: deps.clock, policy: deps.policy }, principalId, 'manage-thresholds', { kind: anchor.kind, id: anchor.id })
         : null;
       if (verdict && !verdict.ok) return { ok: false, status: verdict.status, reason: verdict.reason, detail: verdict.decision.detail ?? '', decision: verdict.decision };
       if (existing.length === 0) return { ok: false, errors: ['unknown-threshold-set'] as const };
@@ -376,7 +377,7 @@ export function createThresholdService(deps: PolicyDeps): ThresholdService {
       const latest = versionsOf(id).at(-1);
       const anchor = latest ? scopeAnchor(deps, latest.scope) : null;
       const verdict = anchor
-        ? gateAct({ world: withExtraObjects(deps.world, [anchor]), clock: deps.clock, policy: deps.policy }, principalId, 'review-data', { kind: anchor.kind, id: anchor.id })
+        ? gateAct({ world: withExtraObjects(deps.world, [anchor]), clock: deps.clock, policy: deps.policy }, principalId, 'manage-thresholds', { kind: anchor.kind, id: anchor.id })
         : null;
       if (verdict && !verdict.ok) return { ok: false, status: verdict.status, reason: verdict.reason, detail: verdict.decision.detail ?? '', decision: verdict.decision };
       if (!latest) return { ok: false, errors: ['unknown-threshold-set'] as const };
