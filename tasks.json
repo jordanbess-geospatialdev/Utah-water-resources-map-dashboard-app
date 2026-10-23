@@ -555,6 +555,45 @@
       "release": "R2",
       "status": "completed",
       "merged_commit": "c9cebfa6868e8cab558326ae99a2e12c3d20060c"
+    },
+    {
+      "id": "WD-027",
+      "title": "Separate QC and approval permissions and align supplier role contracts",
+      "owner": "orchestrator",
+      "phase": "P4",
+      "release": "R2",
+      "status": "completed",
+      "depends_on": [
+        "WD-004",
+        "WD-013",
+        "WD-017",
+        "WD-025-R2"
+      ],
+      "write_scopes": [
+        "tasks.json",
+        "packages/policy/**",
+        "packages/contracts/**",
+        "fixtures/contracts/principals.json",
+        "fixtures/database/expected-row-counts.json",
+        "database/**",
+        "services/api/src/workflows/qc/**",
+        "services/api/src/workflows/revisions/**",
+        "services/api/src/workflows/stewardship/test/assignments.test.ts",
+        "services/api/src/workflows/rating-curves/**",
+        "services/api/src/workflows/accounting-snapshots/**",
+        "apps/web/src/features/operations/fixturePolicy.ts",
+        "apps/web/src/shell/data/fixtures/principals.json",
+        "apps/web/tests/fixturePermissions.test.ts",
+        "apps/web/src/features/rating-curves/**",
+        "apps/web/src/features/accounting-snapshots/**",
+        "tests/qualification/adversarial/policy-fuzz.test.mjs",
+        "tests/qualification-r2/adversarial/finalize-authority-fuzz.test.mjs",
+        "tests/qualification-r2/adversarial/cross-domain-freeze.test.mjs",
+        "tests/qualification-r2/adversarial/restricted-bytes-r2.test.mjs",
+        "docs/product/role-permission-amendment.md",
+        "docs/verification/role-permissions.md"
+      ],
+      "source": "User-authorized roadmap/persona alignment review, 2026-10-21; implements capability separation without resolving owner-specific grants."
     }
   ]
 }

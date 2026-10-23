@@ -18,7 +18,8 @@
 /** Semantic version of the policy vocabulary and evaluation rules. Bumped on any observable behavior change. */
 // 0.1.1 (WD-004 / DEFECT-Q3): statewide-administration satisfies field-visits
 // only for the steward persona family (SATISFACTION_ROLE_GATES).
-export const POLICY_VERSION = '0.1.1';
+// 0.2.0 (WD-027): separate operational QC from approval and raw withdrawal.
+export const POLICY_VERSION = '0.2.0';
 
 /** Role families from the entitlement schema (packages/contracts/schemas/entitlement.json). */
 export type RoleFamily =
@@ -54,6 +55,11 @@ export type Capability =
   | 'edit-permitted-site-fields'
   | 'create-sites'
   | 'review-data'
+  | 'record-data-issues'
+  | 'manage-qc-rules'
+  | 'manage-thresholds'
+  | 'approve-rating-curves'
+  | 'finalize-accounting'
   | 'manage-vocabulary'
   | 'manage-users'
   | 'manage-assignments'

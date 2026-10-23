@@ -205,7 +205,7 @@ const decide = (principal: Principal | null, action: Capability | string, object
  * world at NOW. 'ana' is the deputy column of the "Cody commissioner/deputy"
  * matrix persona, evaluated inside the delegation window.
  * Deliberate fixture narrowings of the matrix ceiling (engineer field profile
- * without review-data; commissioner without create-sites; automation-only
+ * without an explicit review-data grant; commissioner without create-sites; automation-only
  * withdrawal) are marked in NARROWED and must deny with
  * DENY_CAPABILITY_NOT_GRANTED - the matrix ceiling is grant-time guidance,
  * the grant is the authority.
@@ -231,7 +231,7 @@ const GRID: Record<string, Record<string, Expect>> = {
 const NARROWED_CAPABILITY: ReadonlySet<string> = new Set([
   'create-sites|cody', // "Separate explicit grant" - fixture commissioner holds none
   'create-sites|ana',
-  'review-data|fatima', // field profile: reviewing is not a field-engineer capability
+  'review-data|fatima', // sample field grant omits the separately assignable review capability
   'configure-ingestion|fatima', // "Request/delegation only" - engineers request, never configure
   'withdraw-raw|fatima', // "Automation capability only"
   'edit-site-metadata|ana', // deputy delegation carries enter-readings + review-data only
@@ -675,4 +675,43 @@ test('capabilitiesOf and assignmentVersionOf power GET /session (subject, capabi
   assert.deepEqual(anaNow, ['enter-readings', 'review-data'], 'deputy capabilities inside the delegation window');
   assert.deepEqual(capabilitiesOf(world, 'principal-ana-deputy', '2026-07-01T00:00:00Z'), [], 'deputy capabilities vanish after expiry');
   assert.deepEqual(capabilitiesOf(world, 'principal-ghost', NOW), [], 'unknown principal has no capabilities');
+});
+
+
+test('WD-027: broad administration and QC review never imply approval or raw withdrawal', () => {
+  for (const capabilities of [['statewide-administration'], ['review-data'], ['record-data-issues']]) {
+    const w = withEntitlement(world, 'ent-steward-diego', { capabilities });
+    for (const action of ['withdraw-raw', 'approve-rating-curves', 'finalize-accounting']) {
+      assert.equal(decide(ACTORS.diego, action, 'sta-bear-corinne', ['public'], undefined, w).reason, 'DENY_CAPABILITY_NOT_GRANTED', `${capabilities}: ${action}`);
+    }
+  }
+  const admin = withEntitlement(world, 'ent-steward-diego', { capabilities: ['statewide-administration'] });
+  for (const action of ['record-data-issues', 'manage-thresholds', 'manage-qc-rules']) {
+    assert.equal(decide(ACTORS.diego, action, 'sta-bear-corinne', ['public'], undefined, admin).effect, 'allow');
+  }
+});
+
+test('WD-027: narrow operational grants preserve scope, visibility, validity and mutation lifecycle', () => {
+  for (const action of ['record-data-issues', 'manage-thresholds', 'review-data'] as const) {
+    const w = withEntitlement(world, 'ent-engineer-fatima', { capabilities: [action] });
+    assert.equal(decide(ACTORS.fatima, action, 'sta-bear-corinne', ['public'], undefined, w).effect, 'allow');
+    assert.equal(decide(ACTORS.fatima, action, 'sys-weber-river', ['public'], undefined, w).reason, 'DENY_OUT_OF_SCOPE');
+    assert.equal(decide(ACTORS.fatima, action, 'sta-bear-corinne', ['internal'], undefined, w).reason, 'DENY_FIELD_VISIBILITY');
+    for (const other of ['record-data-issues', 'manage-thresholds', 'review-data', 'manage-qc-rules', 'approve-rating-curves', 'finalize-accounting', 'withdraw-raw']) {
+      if (other !== action) assert.equal(decide(ACTORS.fatima, other, 'sta-bear-corinne', ['public'], undefined, w).reason, 'DENY_CAPABILITY_NOT_GRANTED', `${action} must not imply ${other}`);
+    }
+    for (const patch of [{ status: 'revoked' }, { expiresAt: NOW }]) {
+      const invalid = withEntitlement(w, 'ent-engineer-fatima', patch);
+      assert.equal(decide(ACTORS.fatima, action, 'sta-bear-corinne', ['public'], undefined, invalid).effect, 'deny');
+    }
+    const inactive = withPrincipal(w, ACTORS.fatima!.id, { active: false });
+    assert.equal(decide(ACTORS.fatima, action, 'sta-bear-corinne', ['public'], undefined, inactive).reason, 'DENY_PRINCIPAL_INACTIVE');
+  }
+  for (const action of ['record-data-issues', 'manage-thresholds', 'manage-qc-rules', 'approve-rating-curves', 'finalize-accounting', 'withdraw-raw'] as const) {
+    const granted = withEntitlement(world, 'ent-steward-diego', { capabilities: [action] });
+    for (const status of ['inactive', 'retired', 'finalized'] as const) {
+      const w = { ...granted, objects: { ...granted.objects, 'sta-bear-corinne': { ...granted.objects['sta-bear-corinne']!, status } } };
+      assert.equal(decide(ACTORS.diego, action, 'sta-bear-corinne', ['public'], undefined, w).reason, 'DENY_LIFECYCLE_STATE', `${action}/${status}`);
+    }
+  }
 });

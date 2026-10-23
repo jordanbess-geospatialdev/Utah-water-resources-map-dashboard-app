@@ -10,7 +10,7 @@
  * - the decision evidence view: EXACT pinned observation/revision ids,
  *   rating-curve lineage, calculation inputs and the evidence hash;
  * - the finalize flow with authority-aware controls (only principals
- *   holding review-data / statewide-administration may act; everyone else
+ *   holding explicit finalize-accounting assignments may act; everyone else
  *   sees the denial), optimistic-concurrency conflicts surfaced as the
  *   typed FINALIZE_CONFLICT, and supersession that never rewrites prior
  *   bytes;
@@ -204,8 +204,8 @@ export default function AccountingSnapshotsPanel({
           FR-028: a saved decision references the exact observation/revision versions used. FR-029: finalized accounting never
           changes in place — authorized corrections supersede with explicit linkage while measurement corrections continue
           independently. FR-030: flexible periods (incl. mid-month boundaries) and advisory-only supplemental context. Fixture seed{' '}
-          {FIXTURE_SEED}; demo clock {now}. Finalize/reopen authority (review-data: steward or granted reviewer) is PENDING OWNER
-          RATIFICATION.
+          {FIXTURE_SEED}; demo clock {now}. Finalization requires a separate accounting assignment. Demo assignments await
+          program-owner confirmation.
         </p>
       </div>
 
@@ -367,14 +367,14 @@ export default function AccountingSnapshotsPanel({
       {/* --- finalize flow (FR-029) -------------------------------------- */}
       <div style={{ padding: '13px 19px', borderBottom: '1px solid #e9ede8' }}>
         <h3 style={{ fontSize: 10, fontWeight: 700, margin: '0 0 8px' }}>
-          Finalize (authority-aware; optimistic concurrency)
+          Finalize accounting
         </h3>
         <p style={{ fontSize: 9, margin: '0 0 8px', color: '#5d6a5f' }}>
           {currentAuthority === null
             ? 'Unknown principal.'
             : actorMayFinalize
-              ? `${currentAuthority.displayName} may finalize ${SYSTEM_ID} via ${currentAuthority.via} (${currentAuthority.basis}). Rule pending owner ratification.`
-              : `${currentAuthority.displayName} holds no finalize authority for ${SYSTEM_ID} (${currentAuthority.basis}); the server denies with 403.`}
+              ? `${currentAuthority.displayName} is assigned to finalize accounting for this system.`
+              : `${currentAuthority.displayName} is not assigned to finalize accounting for this system.`}
         </p>
         <form onSubmit={handleFinalize} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <button type="submit" disabled={!resolved.ok || !actorMayFinalize} style={{ fontSize: 10 }} aria-disabled={!resolved.ok || !actorMayFinalize}>

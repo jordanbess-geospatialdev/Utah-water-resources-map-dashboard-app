@@ -8,7 +8,7 @@
   "properties": {
     "id": { "type": "string" },
     "principalId": { "type": "string", "description": "Person or organization holding the grant." },
-    "role": { "type": "string", "enum": ["engineer", "commissioner", "deputy", "steward", "researcher", "owner"], "description": "Role family. Engineer sub-profiles (field, regional, automation, modeler) are capability subsets, not extra authority." },
+    "role": { "type": "string", "enum": ["public", "water-user", "owner", "researcher", "commissioner", "deputy", "engineer", "steward"], "description": "Role family. Engineer sub-profiles (field, regional, automation, modeler) are capability subsets, not extra authority." },
     "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Action-specific granted capabilities, e.g. enter-readings, revise-best-available, edit-site-metadata, create-sites, withdraw-raw." },
     "scopeType": { "type": "string", "enum": ["system", "organization", "site", "statewide", "dataset"], "description": "Kind of object the grant is scoped to." },
     "scopeId": { "type": ["string", "null"], "description": "Scoped object identifier; null only for statewide scope." },

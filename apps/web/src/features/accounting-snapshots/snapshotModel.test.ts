@@ -40,6 +40,14 @@ const NOW = '2026-03-09T07:00:00Z';
 const CODY = 'principal-cody-commissioner';
 const DIEGO = 'principal-diego-steward';
 const FATIMA = 'principal-fatima-engineer';
+const fixturesPath = '../../shell/data/fixtures.ts';
+const { entitlements }: typeof import('../../shell/data/fixtures') = await import(fixturesPath);
+// These grants exist only in tests; the default Cody/Ana fixtures have no finalization authority.
+const testApprovals = entitlements.map((grant) =>
+  ['ent-commissioner-cody', 'ent-deputy-ana'].includes(grant.id)
+    ? { ...grant, capabilities: [...grant.capabilities, 'finalize-accounting'] }
+    : grant,
+);
 
 // ---------------------------------------------------------------------------
 // Flexible periods (FR-030)
@@ -154,19 +162,34 @@ test('a built snapshot is a value object: rebuilding with the same inputs is ide
 // Authority mirror (owner-ratification-pending)
 // ---------------------------------------------------------------------------
 
-test('finalize authorities mirror the review-data gate (steward statewide, Cody Bear only, deputy via delegation)', () => {
-  const authorities = finalizeAuthorities(NOW);
+test('default QC reviewers and broad administrators do not gain finalization authority', () => {
+  const defaults = new Map(finalizeAuthorities(NOW).map((authority) => [authority.principalId, authority]));
+  assert.deepEqual(defaults.get(CODY)?.canFinalizeSystemIds, []);
+  assert.deepEqual(defaults.get('principal-ana-deputy')?.canFinalizeSystemIds, []);
+  const withoutApproval = entitlements.map((grant) => ({
+    ...grant, capabilities: grant.capabilities.filter((capability) => capability !== 'finalize-accounting'),
+  }));
+  assert.ok(finalizeAuthorities(NOW, withoutApproval).every((authority) => authority.canFinalizeSystemIds.length === 0));
+  const ledger = new model.DemoFinalizeLedger(withoutApproval);
+  for (const actorId of [CODY, DIEGO]) {
+    assert.equal(ledger.finalize({ actorId, period: { kind: 'calendar-year', year: 2026 }, contentTag: 'unapproved', expectedCurrentId: null }).outcome, 'denied');
+  }
+  assert.equal(ledger.allRecords.length, 0);
+});
+
+test('explicit accounting assignments retain scope and deputy delegation bounds', () => {
+  const authorities = finalizeAuthorities(NOW, testApprovals);
   const byId = new Map(authorities.map((authority) => [authority.principalId, authority]));
   assert.deepEqual([...(byId.get(DIEGO)?.canFinalizeSystemIds ?? [])].sort(), ['sys-bear-river', 'sys-weber-river']);
-  assert.equal(byId.get(DIEGO)?.via, 'statewide-administration');
+  assert.equal(byId.get(DIEGO)?.via, 'finalize-accounting');
   assert.deepEqual(byId.get(CODY)?.canFinalizeSystemIds, ['sys-bear-river']);
-  assert.equal(byId.get(CODY)?.via, 'review-data');
+  assert.equal(byId.get(CODY)?.via, 'finalize-accounting');
   assert.deepEqual(byId.get('principal-ana-deputy')?.canFinalizeSystemIds, ['sys-bear-river']);
   assert.deepEqual(byId.get(FATIMA)?.canFinalizeSystemIds, []);
   assert.deepEqual(byId.get('principal-sarah-researcher')?.canFinalizeSystemIds, []);
 
   // After Ana's delegation expires (2026-06-30) she loses the authority.
-  const later = finalizeAuthorities('2026-07-01T00:00:00Z');
+  const later = finalizeAuthorities('2026-07-01T00:00:00Z', testApprovals);
   assert.deepEqual(later.find((authority) => authority.principalId === 'principal-ana-deputy')?.canFinalizeSystemIds, []);
 });
 
@@ -184,7 +207,7 @@ function finalizeOk(ledger: DemoFinalizeLedger, actorId: string | null, contentT
 }
 
 test('authority gate: anonymous 401-style denial, engineer denial, hidden-system denial', () => {
-  const ledger = new model.DemoFinalizeLedger();
+  const ledger = new model.DemoFinalizeLedger(testApprovals);
   const anonymous = ledger.finalize({ actorId: null, period: CY2026, contentTag: 'v1', expectedCurrentId: null });
   assert.equal(anonymous.outcome, 'denied');
   if (anonymous.outcome === 'denied') assert.equal(anonymous.status, 401);
@@ -199,7 +222,7 @@ test('authority gate: anonymous 401-style denial, engineer denial, hidden-system
 });
 
 test('two simultaneous finalizations: the loser receives the typed FINALIZE_CONFLICT naming the winner', () => {
-  const ledger = new model.DemoFinalizeLedger();
+  const ledger = new model.DemoFinalizeLedger(testApprovals);
   const winner = finalizeOk(ledger, CODY, 'cody content', null);
   const loser = ledger.finalize({ actorId: DIEGO, period: CY2026, contentTag: 'diego content', expectedCurrentId: null });
   assert.equal(loser.outcome, 'conflict');
@@ -211,7 +234,7 @@ test('two simultaneous finalizations: the loser receives the typed FINALIZE_CONF
 });
 
 test('supersession chain: explicit linkage, prior record bytes unchanged, status badges and banners', () => {
-  const ledger = new model.DemoFinalizeLedger();
+  const ledger = new model.DemoFinalizeLedger(testApprovals);
   const first = finalizeOk(ledger, CODY, 'v1 content', null);
   const superseded = ledger.finalizeSuperseding({
     actorId: DIEGO,
@@ -251,7 +274,7 @@ test('supersession chain: explicit linkage, prior record bytes unchanged, status
 });
 
 test('superseding guards: unchanged content and stale expected ids reject', () => {
-  const ledger = new model.DemoFinalizeLedger();
+  const ledger = new model.DemoFinalizeLedger(testApprovals);
   const first = finalizeOk(ledger, CODY, 'v1', null);
 
   const unchanged = ledger.finalizeSuperseding({ actorId: DIEGO, period: CY2026, contentTag: 'v1', expectedCurrentId: first.id, reason: 'no-op' });

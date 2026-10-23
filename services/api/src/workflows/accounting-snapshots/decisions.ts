@@ -24,7 +24,7 @@
  * Authority: recording a distribution decision is gated like report
  * generation (action generate-reports on the system object - the WD-025
  * scope gate is reused verbatim). Finalize/reopen authority is the SEPARATE
- * review-data gate in finalize.ts.
+ * finalize-accounting gate in finalize.ts.
  *
  * Pure: injected deps and clock; no I/O beyond the fixture stores.
  */

@@ -13,8 +13,8 @@
  * stale/absent optimistic guards, empty and hostile reasons).
  *
  * Oracle: an attempt is legal ONLY for the documented authority set (the
- * statewide steward via statewide-administration; an explicitly granted
- * reviewer via review-data inside her window). Every other combination
+ * explicit finalize-accounting grantee inside the current assignment and
+ * delegation window). Every other combination
  * must DENY (401/403/404/422) or return the typed FINALIZE_CONFLICT, and
  * a denied attempt must never append a record, mutate the ledger state,
  * or write an audit event.
@@ -34,7 +34,14 @@ const { DEFAULT_INCLUDE } = await import('../../../services/api/src/workflows/di
 const { reportWorld } = await import('../../../services/api/src/workflows/distribution-report/world.ts');
 const { standardSupplierWorld } = await import('../../../services/api/src/workflows/supplier-report/world.ts');
 
-const WORLD = reportWorld().policyWorld;
+const { withEntitlement } = await import('../../../packages/policy/src/index.ts');
+const BASE_WORLD = reportWorld().policyWorld;
+let WORLD = BASE_WORLD;
+// Explicit positive-control grants, separate from the default QC-only assignments.
+for (const id of ['ent-commissioner-cody', 'ent-deputy-ana']) {
+  const grant = WORLD.assignments.find((assignment) => assignment.id === id);
+  WORLD = withEntitlement(WORLD, id, { capabilities: [...grant.capabilities, 'finalize-accounting'] });
+}
 const SUPPLIER_WORLD = standardSupplierWorld();
 const BEAR = 'sys-bear-river';
 const WEBER = 'sys-weber-river';
@@ -47,6 +54,24 @@ const ANA = 'principal-ana-deputy';
 
 /** The documented authority set for BEAR at NOW (the only legal finalizers). */
 const AUTHORIZED = new Set([DIEGO, CODY, ANA]);
+
+test('baseline QC grants and broad administration cannot finalize or supersede', () => {
+  const steward = BASE_WORLD.assignments.find((assignment) => assignment.id === 'ent-steward-diego');
+  const world = withEntitlement(BASE_WORLD, steward.id, {
+    capabilities: steward.capabilities.filter((capability) => capability !== 'finalize-accounting'),
+  });
+  for (const actorId of [CODY, ANA, DIEGO]) {
+    const authority = checkFinalizeAuthority(world, actorId, BEAR, NOW);
+    assert.equal(authority.outcome, 'denied');
+    assert.equal(authority.policyReason, 'DENY_CAPABILITY_NOT_GRANTED');
+    const ledger = new FinalizedLedger();
+    const request = { systemId: BEAR, period: { kind: 'calendar-year', year: 2026 }, decisionId: null, content: contentOf(1, 'unapproved'), actorId, expectedCurrentId: null, now: NOW };
+    assert.equal(ledger.finalize(world, request).outcome, 'denied');
+    assert.equal(ledger.finalizeSuperseding(world, { ...request, reason: 'no approval authority' }).outcome, 'denied');
+    assert.equal(ledger.list().length, 0);
+    assert.equal(ledger.events.length, 0);
+  }
+});
 
 /**
  * Unauthorized actors, each with the reason it must be refused. Drawn from
@@ -143,14 +168,14 @@ test('no unauthorized actor can finalize; every denied attempt leaves the ledger
 
 test('the denial vocabulary is the documented hidden-object/identity mapping', () => {
   const expectations = [
-    // priya holds NO review-data capability anywhere: the engine answers
+    // priya holds NO finalize-accounting capability anywhere: the engine answers
     // DENY_CAPABILITY_NOT_GRANTED (403), not the hidden-object 404 — the
     // hidden-object mapping fires for capability-holders probing outside
     // their scope (CODY on Weber, below).
     ['anonymous', null, 401, 'DENY_ANONYMOUS'],
     ['fatima (in scope, no capability)', 'principal-fatima-engineer', 403, 'DENY_CAPABILITY_NOT_GRANTED'],
     ['sarah', 'principal-sarah-researcher', 403, 'DENY_CAPABILITY_NOT_GRANTED'],
-    ['priya (engineer, no review-data)', 'principal-priya-engineer', 403, 'DENY_CAPABILITY_NOT_GRANTED'],
+    ['priya (engineer, no finalize-accounting)', 'principal-priya-engineer', 403, 'DENY_CAPABILITY_NOT_GRANTED'],
     ['capability-holder out of scope (Cody on Weber)', 'principal-cody-commissioner', 404, 'DENY_OUT_OF_SCOPE'],
     ['unknown system', CODY, 404, 'DENY_UNKNOWN_OBJECT'],
     ['unknown principal', 'principal-ghost-unknown', 401, null],

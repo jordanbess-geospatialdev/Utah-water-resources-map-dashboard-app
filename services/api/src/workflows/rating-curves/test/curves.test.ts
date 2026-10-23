@@ -7,7 +7,7 @@
  *   (the seeded 2019/2026 join) stays legal;
  * - at-instant resolution incl. boundary instants: half-open semantics at
  *   the seeded join 2026-03-07T18:00:00Z and at the supersession boundary;
- * - approval gating: the authoring engineer cannot approve (no review-data
+ * - approval gating: the authoring engineer cannot approve (no approve-rating-curves
  *   grant), the owner-side commissioner and the statewide steward can, the
  *   deputy only inside her delegation window; out-of-scope engineer and
  *   anonymous are rejected;
@@ -18,7 +18,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createRatingCurveStore } from '../store.ts';
+import { createRatingCurveStore } from './approvalGrants.ts';
 import {
   approveCurveVersion,
   convertStage,
@@ -117,7 +117,7 @@ test('a created version lands as a draft with author and provenance, then approv
   assert.equal(created.version.effectiveTo, null);
   assert.equal(created.version.version, 1);
 
-  // the author cannot approve: no review-data grant in the fixture world
+  // the author cannot approve: no approve-rating-curves grant in the fixture world
   const selfApproval = approveCurveVersion(store, FATIMA, created.version.id, ctx());
   assert.equal(selfApproval.outcome, 'rejected');
   if (selfApproval.outcome === 'rejected') {
@@ -403,7 +403,7 @@ test('approval is steward-or-owner gated; authors, outsiders and anonymous are r
     assert.equal(anonymous.policyReason, 'DENY_ANONYMOUS');
   }
 
-  // the authoring engineer holds no review-data grant -> 403
+  // the authoring engineer holds no approve-rating-curves grant -> 403
   const author = approveCurveVersion(store, FATIMA, versionId, ctx());
   assert.equal(author.outcome, 'rejected');
   if (author.outcome === 'rejected') assert.equal(author.status, 403);
@@ -430,7 +430,7 @@ test('approval is steward-or-owner gated; authors, outsiders and anonymous are r
     assert.equal(expiredDeputy.status, 403);
     assert.equal(expiredDeputy.policyReason, 'DENY_DELEGATION_EXPIRED');
   }
-  // ...while the statewide steward can approve at any time
+  // ...while the explicitly assigned steward can approve within his grant window
   const steward = approveCurveVersion(store2, DIEGO, versionId2, ctx(AFTER_DELEGATION));
   assert.equal(steward.outcome, 'applied');
 });

@@ -10,8 +10,8 @@
  * - The demo decision/finalize builders mirror
  *   services/api/src/workflows/accounting-snapshots/{decisions,finalize}.ts:
  *   evidence pins exact revision ids from the fixture chains; finalization is
- *   authority-gated (review-data: steward or granted reviewer - PENDING
- *   OWNER RATIFICATION), optimistic-concurrency-guarded (typed 409 conflict)
+ *   authority-gated (explicit finalize-accounting assignments, pending
+ *   owner ratification), optimistic-concurrency-guarded (typed 409 conflict)
  *   and supersedes without ever rewriting prior bytes (dual-hash stability).
  *   The API remains the source of truth; the demos exist because the HTTP
  *   service is not wired yet (README.md).
@@ -298,20 +298,21 @@ export function supersededBanner(view: FinalizedChainView): string | null {
 // ---------------------------------------------------------------------------
 
 export const FINALIZE_AUTHORITY_RULE_MIRROR =
-  'finalize/reopen requires review-data on the system object (the statewide steward via statewide-administration, or an explicitly granted reviewer) - RULE PENDING OWNER RATIFICATION';
+  'finalize/reopen requires an explicit finalize-accounting grant on the system object; QC review and general administration do not grant approval - ASSIGNMENTS PENDING OWNER RATIFICATION';
 
 export interface FinalizeAuthorityModel {
   readonly principalId: string;
   readonly displayName: string;
   readonly role: string;
   readonly canFinalizeSystemIds: readonly string[];
-  readonly via: 'review-data' | 'statewide-administration' | 'none';
+  readonly via: 'finalize-accounting' | 'none';
   readonly basis: string;
   readonly delegation: { effectiveAt: string; expiresAt: string; delegatedBy: string } | null;
 }
 
 function withinWindow(ent: EntitlementRecord, atMs: number): boolean {
   if (ent.status !== 'active') return false;
+  if (ent.role === 'deputy' && (!ent.delegation || ent.scopeType === 'statewide')) return false;
   if (Date.parse(ent.effectiveAt) > atMs) return false;
   if (ent.expiresAt !== null && atMs >= Date.parse(ent.expiresAt)) return false;
   const delegation = ent.delegation ?? null;
@@ -324,11 +325,10 @@ function withinWindow(ent: EntitlementRecord, atMs: number): boolean {
 
 /**
  * Which principals can finalize accounting for which systems at `now`
- * (mirror of the engine's allow rules for action review-data: an explicit
- * review-data grant, or statewide-administration). The SERVER re-evaluates
+ * (explicit finalize-accounting grants only). The SERVER re-evaluates
  * the real engine on every request; this model only drives the UI picker.
  */
-export function finalizeAuthorities(now: string = FIXTURE_CLOCK): readonly FinalizeAuthorityModel[] {
+export function finalizeAuthorities(now: string = FIXTURE_CLOCK, grants: readonly EntitlementRecord[] = entitlements): readonly FinalizeAuthorityModel[] {
   const atMs = Date.parse(now);
   const models: FinalizeAuthorityModel[] = [];
   const allSystemIds = [...new Set(stations.map((station) => station.systemId))].sort();
@@ -337,10 +337,10 @@ export function finalizeAuthorities(now: string = FIXTURE_CLOCK): readonly Final
     const systemIds = new Set<string>();
     let statewide = false;
     let delegation: FinalizeAuthorityModel['delegation'] = null;
-    for (const ent of entitlements) {
+    for (const ent of grants) {
       if (ent.principalId !== user.id || !withinWindow(ent, atMs)) continue;
       const capabilities = ent.capabilities;
-      if (!capabilities.includes('review-data') && !capabilities.includes('statewide-administration')) continue;
+      if (!capabilities.includes('finalize-accounting')) continue;
       if (ent.scopeType === 'system' && ent.scopeId) systemIds.add(ent.scopeId);
       if (ent.scopeType === 'statewide') statewide = true;
       if (ent.delegation) delegation = ent.delegation;
@@ -351,12 +351,12 @@ export function finalizeAuthorities(now: string = FIXTURE_CLOCK): readonly Final
       displayName: user.displayName,
       role: user.roles[0] ?? 'user',
       canFinalizeSystemIds: canFinalize,
-      via: statewide ? 'statewide-administration' : canFinalize.length > 0 ? 'review-data' : 'none',
+      via: canFinalize.length > 0 ? 'finalize-accounting' : 'none',
       basis:
         canFinalize.length > 0
           ? statewide
-            ? 'statewide-administration (every system)'
-            : `review-data assignment${canFinalize.length > 1 ? 's' : ''}: ${canFinalize.join(', ')}`
+            ? 'Assigned to finalize accounting statewide'
+            : `Assigned to finalize accounting for ${canFinalize.join(', ')}`
           : 'no finalize authority',
       delegation,
     });
@@ -544,16 +544,21 @@ export function periodKeyModel(systemId: string, period: PeriodSpecModel): strin
 }
 
 /**
- * Demo ledger mirroring finalize.ts: authority gate (review-data mirror),
+ * Demo ledger mirroring finalize.ts: explicit finalization capability,
  * optimistic concurrency guard (typed 409-style conflict), idempotent
  * replay, and supersession that never rewrites prior records.
  */
 export class DemoFinalizeLedger {
   private readonly records: FinalizedLike[] = [];
+  private readonly grants: readonly EntitlementRecord[];
+
+  constructor(grants: readonly EntitlementRecord[] = entitlements) {
+    this.grants = grants;
+  }
 
   private authorityOf(actorId: string | null, systemId: string, now: string): FinalizeDemoOutcome | null {
     if (actorId === null) return { outcome: 'denied', status: 401, message: 'finalizing accounting requires an authenticated, active principal' };
-    const authority = finalizeAuthorities(now).find((candidate) => candidate.principalId === actorId);
+    const authority = finalizeAuthorities(now, this.grants).find((candidate) => candidate.principalId === actorId);
     if (!authority) return { outcome: 'denied', status: 401, message: 'unknown principal' };
     if (!authority.canFinalizeSystemIds.includes(systemId)) {
       return { outcome: 'denied', status: 403, message: `actor is not permitted to finalize accounting for this system (${authority.basis}; rule pending owner ratification)` };

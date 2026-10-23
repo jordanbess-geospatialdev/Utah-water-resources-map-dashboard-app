@@ -3,7 +3,7 @@
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
     "title": "Utah Water Measurement Data Dashboard API",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Proposed application contracts for the Utah Water Measurement Data Dashboard, prefix /api/v1 (technical specification, 'Proposed application API'). Every route from the specification's API table is described here. Authorization is evaluated on every endpoint: allow_public_read requires an explicitly published object with public-projection fields; allow_protected requires an authenticated active principal whose role grants the action within a current assignment. Successful responses include requestId, effective filters, data revision and freshness where relevant. Errors use the shared Problem model. These are proposed contracts for implementation, not a claim that a production API exists. Deterministic fixtures: fixtures/contracts (seed utah-water-fixture-v1). Contract hashes: CONTRACTS-HASH.md.",
     "contact": { "name": "DWRi Water Measurement Program" }
   },
@@ -1421,7 +1421,7 @@
         "required": ["principalId", "role", "scopeType", "status"],
         "properties": {
           "principalId": { "type": "string" },
-          "role": { "type": "string", "enum": ["engineer", "commissioner", "deputy", "steward", "researcher", "owner"] },
+          "role": { "type": "string", "enum": ["public", "water-user", "owner", "researcher", "commissioner", "deputy", "engineer", "steward"] },
           "capabilities": { "type": "array", "items": { "type": "string" } },
           "scopeType": { "type": "string", "enum": ["system", "organization", "site", "statewide", "dataset"] },
           "scopeId": { "type": ["string", "null"] },
@@ -1447,7 +1447,7 @@
         "properties": {
           "id": { "type": "string" },
           "principalId": { "type": "string", "description": "Person or organization holding the grant." },
-          "role": { "type": "string", "enum": ["engineer", "commissioner", "deputy", "steward", "researcher", "owner"], "description": "Role family. Engineer sub-profiles (field, regional, automation, modeler) are capability subsets, not extra authority." },
+          "role": { "type": "string", "enum": ["public", "water-user", "owner", "researcher", "commissioner", "deputy", "engineer", "steward"], "description": "Role family. Engineer sub-profiles (field, regional, automation, modeler) are capability subsets, not extra authority." },
           "capabilities": { "type": "array", "items": { "type": "string" }, "description": "Action-specific granted capabilities, e.g. enter-readings, revise-best-available, edit-site-metadata, create-sites, withdraw-raw." },
           "scopeType": { "type": "string", "enum": ["system", "organization", "site", "statewide", "dataset"], "description": "Kind of object the grant is scoped to." },
           "scopeId": { "type": ["string", "null"], "description": "Scoped object identifier; null only for statewide scope." },

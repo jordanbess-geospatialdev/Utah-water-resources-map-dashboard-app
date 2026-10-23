@@ -26,7 +26,7 @@
  *   (../../series/aggregate.ts, rectangle-right@1), reached through the
  *   same per-stream calls the WD-025 report generator makes;
  * - finalize/reopen authority is the shared entitlement engine
- *   (packages/policy, action review-data on the system object) - see
+ *   (packages/policy, action finalize-accounting on the system object) - see
  *   finalize.ts for the OWNER-RATIFICATION-PENDING note;
  * - rating-curve lineage ids come from the WD-011-R2 store
  *   (../rating-curves/store.ts), revision evidence from the WD-011
@@ -230,13 +230,12 @@ export interface FinalizedContent {
 /** How finalize authority was satisfied, recorded on every finalized record. */
 export interface FinalizeAuthorityEvidence {
   readonly actorId: string;
-  /** 'statewide-administration' (the steward) or an explicit 'review-data' grant (granted reviewer). */
-  readonly via: 'review-data' | 'statewide-administration';
+  /** The explicit, scoped approval capability checked for this record. */
+  readonly via: 'finalize-accounting';
   readonly assignmentVersion: number;
   /**
-   * OWNER-RATIFICATION-PENDING: mapping finalize/reopen authority onto the
-   * review-data row of the proposed authorization matrix is approval-gated
-   * and flagged pending owner ratification (see finalize.ts).
+   * OWNER-RATIFICATION-PENDING: accountable roles and actual assignments
+   * require program-owner ratification (see finalize.ts).
    */
   readonly rule: string;
 }

@@ -244,6 +244,9 @@ export const AUTHORIZATION_MATRIX: readonly MatrixRow[] = [
  */
 export const ENGINEER_PROFILES: Readonly<Record<EngineerProfile, readonly Capability[]>> = {
   field: [
+    'record-data-issues',
+    'review-data',
+    'manage-thresholds',
     'enter-readings',
     'revise-best-available',
     'edit-site-metadata',
@@ -252,6 +255,9 @@ export const ENGINEER_PROFILES: Readonly<Record<EngineerProfile, readonly Capabi
     'view-internal-diagnostics',
   ],
   automation: [
+    'record-data-issues',
+    'review-data',
+    'manage-thresholds',
     'enter-readings',
     'revise-best-available',
     'edit-site-metadata',
@@ -262,6 +268,9 @@ export const ENGINEER_PROFILES: Readonly<Record<EngineerProfile, readonly Capabi
     'withdraw-raw',
   ],
   regional: [
+    'record-data-issues',
+    'review-data',
+    'manage-thresholds',
     'enter-readings',
     'revise-best-available',
     'edit-site-metadata',
@@ -294,10 +303,15 @@ export const ROLE_CEILING: Readonly<Record<RoleFamily, readonly Capability[]>> =
   'water-user': ['browse-published', 'manage-own-preferences', 'manage-own-tokens', 'view-restricted-details', 'supplier-reporting'],
   owner: ['browse-published', 'manage-own-preferences', 'manage-own-tokens', 'view-restricted-details', 'supplier-reporting'],
   researcher: ['browse-published', 'manage-own-preferences', 'manage-own-tokens', 'read-approved-datasets', 'create-exports'],
-  commissioner: ['browse-published', 'manage-own-preferences', 'manage-own-tokens', 'view-restricted-details', 'enter-readings', 'revise-best-available', 'edit-permitted-site-fields', 'create-sites', 'review-data', 'generate-reports'],
-  deputy: ['browse-published', 'manage-own-preferences', 'manage-own-tokens', 'view-restricted-details', 'enter-readings', 'revise-best-available', 'edit-permitted-site-fields', 'review-data', 'generate-reports'],
+  commissioner: ['browse-published', 'manage-own-preferences', 'manage-own-tokens', 'view-restricted-details', 'enter-readings', 'revise-best-available', 'edit-permitted-site-fields', 'create-sites', 'review-data', 'record-data-issues', 'manage-thresholds', 'approve-rating-curves', 'finalize-accounting', 'generate-reports'],
+  deputy: ['browse-published', 'manage-own-preferences', 'manage-own-tokens', 'view-restricted-details', 'enter-readings', 'revise-best-available', 'edit-permitted-site-fields', 'review-data', 'record-data-issues', 'manage-thresholds', 'approve-rating-curves', 'finalize-accounting', 'generate-reports'],
   engineer: ENGINEER_FAMILY_CEILING,
   steward: [
+    'record-data-issues',
+    'manage-qc-rules',
+    'manage-thresholds',
+    'approve-rating-curves',
+    'finalize-accounting',
     'browse-published',
     'manage-own-preferences',
     'manage-own-tokens',
@@ -404,6 +418,10 @@ export const CAPABILITY_SATISFIES: Readonly<Record<string, readonly Capability[]
     'create-sites',
     'review-data',
     'field-visits',
+    'record-data-issues',
+    'manage-thresholds',
+    'approve-rating-curves',
+    'finalize-accounting',
     'view-internal-diagnostics',
     'generate-reports',
     'create-exports',
@@ -416,6 +434,12 @@ export const CAPABILITY_SATISFIES: Readonly<Record<string, readonly Capability[]
   'edit-permitted-site-fields': ['edit-permitted-site-fields', 'edit-site-metadata', 'statewide-administration'],
   'create-sites': ['create-sites', 'statewide-administration'],
   'review-data': ['review-data', 'statewide-administration'],
+  'record-data-issues': ['record-data-issues', 'statewide-administration'],
+  'manage-qc-rules': ['manage-qc-rules', 'statewide-administration'],
+  'manage-thresholds': ['manage-thresholds', 'statewide-administration'],
+  // Approval authority is never implied by data review or general administration.
+  'approve-rating-curves': ['approve-rating-curves'],
+  'finalize-accounting': ['finalize-accounting'],
   'manage-vocabulary': ['manage-vocabulary', 'statewide-administration'],
   'manage-users': ['manage-users', 'statewide-administration'],
   'manage-assignments': ['manage-assignments', 'statewide-administration'],
@@ -423,7 +447,7 @@ export const CAPABILITY_SATISFIES: Readonly<Record<string, readonly Capability[]
   // The engineer "Request/delegation only" verb is NOT satisfied by configure-ingestion.
   'request-ingestion-configuration': ['request-ingestion-configuration'],
   // Raw withdrawal: automation capability, or the steward governance capability.
-  'withdraw-raw': ['withdraw-raw', 'statewide-administration'],
+  'withdraw-raw': ['withdraw-raw'],
   'manage-own-tokens': ['manage-own-tokens'],
   'supplier-reporting': ['supplier-reporting'],
   // Field visits are engineer-profile work (field/automation/regional); the
@@ -516,6 +540,11 @@ export const ACTION_LIFECYCLE_CLASS: Readonly<Record<string, ActionLifecycleClas
   'enter-readings': 'mutate',
   'revise-best-available': 'mutate',
   'review-data': 'mutate',
+  'record-data-issues': 'mutate',
+  'manage-thresholds': 'mutate',
+  'approve-rating-curves': 'mutate',
+  'finalize-accounting': 'mutate',
+  'manage-qc-rules': 'mutate',
   'withdraw-raw': 'mutate',
   'field-visits': 'mutate',
   'create-sites': 'mutate',

@@ -11,7 +11,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createRatingCurveStore, type RatingCurveStore } from '../store.ts';
+import type { RatingCurveStore } from '../store.ts';
+import { createRatingCurveStore } from './approvalGrants.ts';
 import { approveCurveVersion, convertStage, createCurveVersion, supersedeCurveVersion } from '../curves.ts';
 import { approveShiftVersion, convertWithShift, createShiftVersion, supersedeShiftVersion } from '../shifts.ts';
 

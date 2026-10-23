@@ -133,7 +133,7 @@ test('FR-034: out-of-range fixture values trigger labelled indicators - the 9500
   }
 });
 
-test('FR-034: threshold sets are scoped and versioned; the system-scoped reviewer manages Bear sets, the engineer cannot', () => {
+test('FR-034: threshold sets are scoped and versioned; the explicitly granted threshold manager manages Bear sets, the engineer cannot', () => {
   const clock = advancingClock();
   const svc = createThresholdService({ world: buildTestWorld(), clock: clock.clock });
   const levels = [{ id: 'stage-high', property: 'stage', op: '>=', value: 2.55, label: 'Stage above flood watch', symbol: '▲', severity: 'warn' }];
@@ -141,7 +141,7 @@ test('FR-034: threshold sets are scoped and versioned; the system-scoped reviewe
   assert.ok(codySet.ok, JSON.stringify(codySet));
   assert.equal(codySet.set.status, 'draft');
   assert.equal(codySet.set.author, CODY);
-  // Engineer denied: enter-readings never satisfies review-data.
+  // Engineer denied: ordinary entry and issue recording never satisfy manage-thresholds.
   const fatimaSet = svc.createThresholdSet(FATIMA, { id: 'th-engineer-x', scope: { kind: 'stream', streamId: 'str-corinne-q' }, levels });
   assert.ok(!fatimaSet.ok && 'status' in fatimaSet);
   assert.equal(fatimaSet.status, 403);

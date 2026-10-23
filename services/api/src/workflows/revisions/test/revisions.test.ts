@@ -15,6 +15,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { createRevisionStore } from '../store.ts';
+import { withEntitlement } from '../../../../../../packages/policy/src/index.ts';
 import { applyCorrection, withdrawOriginal } from '../workflow.ts';
 import { pointAudit, intervalAudit, evidenceFor } from '../audit.ts';
 import type { RevisionStore } from '../store.ts';
@@ -34,7 +35,7 @@ const CODY = 'principal-cody-commissioner'; // commissioner, Bear River, revise-
 const PRIYA = 'principal-priya-engineer'; // engineer, Weber River only -> out of scope here
 const SARAH = 'principal-sarah-researcher'; // researcher -> no correction verb
 const ANA = 'principal-ana-deputy'; // deputy: enter-readings/review-data only
-const DIEGO = 'principal-diego-steward'; // steward: statewide-administration (satisfies withdraw-raw)
+const DIEGO = 'principal-diego-steward'; // steward: explicit withdraw-raw grant
 
 const NOW = '2026-03-10T14:00:00Z';
 const AFTER_YEAR_END = '2027-01-15T12:00:00Z';
@@ -436,4 +437,37 @@ test('store exposes the policy world with scoped observation objects', () => {
   assert.equal(object?.systemId, 'sys-bear-river');
   const owner = store.world.objects['obs-ho-001'];
   assert.equal(owner?.visibility, 'restricted');
+});
+
+
+test('WD-027: raw withdrawal needs an explicit grant, including for the statewide steward', () => {
+  const store = createRevisionStore();
+  const withoutWithdrawal = { ...store, world: withEntitlement(store.world, 'ent-steward-diego', { capabilities: ['statewide-administration'] }) };
+  const denied = withdrawOriginal(withoutWithdrawal, DIEGO, KEY_Q044, withdrawal, { now: NOW });
+  assert.equal(denied.outcome, 'rejected');
+  if (denied.outcome === 'rejected') assert.equal(denied.status, 403);
+  assert.equal(store.currentVersion(KEY_Q044), 0);
+  const explicit = { ...store, world: withEntitlement(store.world, 'ent-steward-diego', { capabilities: ['withdraw-raw'] }) };
+  assert.equal(withdrawOriginal(explicit, DIEGO, KEY_Q044, withdrawal, { now: NOW }).outcome, 'applied');
+});
+
+test('WD-027: processing review is separate from corrections and is rechecked before replay', () => {
+  const store = createRevisionStore();
+  for (const input of [correction({ processingLevel: 'reviewed' }), correction({ type: 'level-advance' })]) {
+    const denied = applyCorrection(store, FATIMA, KEY_Q044, input, { now: NOW });
+    assert.equal(denied.outcome, 'rejected');
+    if (denied.outcome === 'rejected') assert.equal(denied.status, 403);
+  }
+  assert.equal(store.currentVersion(KEY_Q044), 0);
+  const base = store.world.assignments.find((a) => a.id === 'ent-engineer-fatima')!;
+  const reviewedStore = { ...store, world: withEntitlement(store.world, base.id, { capabilities: [...base.capabilities, 'review-data'] }) };
+  const reviewed = correction({ processingLevel: 'reviewed' });
+  const ctx = { now: NOW, idempotencyKey: 'wd027-reviewed' };
+  assert.equal(applyCorrection(reviewedStore, FATIMA, KEY_Q044, reviewed, ctx).outcome, 'applied');
+  assert.equal(store.currentVersion(KEY_Q044), 1);
+  const noReview = applyCorrection(store, FATIMA, KEY_Q044, reviewed, ctx);
+  assert.equal(noReview.outcome, 'rejected', 'removing the review grant blocks an otherwise valid replay');
+  assert.equal(store.currentVersion(KEY_Q044), 1);
+  const ordinary = applyCorrection(store, FATIMA, KEY_Q044, correction({ baseRevisionVersion: 1, processingLevel: 'best-available' }), { now: NOW });
+  assert.equal(ordinary.outcome, 'applied', 'ordinary correction remains possible');
 });

@@ -9,11 +9,11 @@
  *
  * - A KNOWN ISSUE binds one stream + half-open time interval, a status
  *   (open / monitoring / resolved), a VISIBILITY (public / internal) and an
- *   append-only RESOLUTION HISTORY. Recording and status changes are data-
- *   review governance actions: every mutation goes through the policy
- *   engine (action `review-data` on the stream's own policy object, so the
- *   server-side system scope decides - an engineer without review-data is
- *   denied 403, a system-scoped reviewer may record issues on streams
+ *   append-only RESOLUTION HISTORY. Recording and status changes are scoped
+ *   issue-management actions: every mutation goes through the policy
+ *   engine (action `record-data-issues` on the stream's own policy object, so the
+ *   server-side system scope decides - an actor without record-data-issues is
+ *   denied 403, a system-scoped issue operator may record issues on streams
  *   inside their system, the statewide steward anywhere).
  * - STATUS TRANSITIONS: open -> monitoring -> resolved, with open ->
  *   resolved and the reopen paths (monitoring -> open, resolved ->
@@ -107,14 +107,14 @@ export function createKnownIssueService(deps: KnownIssueDeps): KnownIssueService
 
   const streamObject = (streamId: string) => deps.world.objects[streamId] ?? null;
 
-  /** review-data gate on the stream's own policy object (server-side scope). */
+  /** record-data-issues gate on the stream's own policy object (server-side scope). */
   const gateReview = (principalId: string | null, streamId: string): StreamDenial | null => {
     const object = streamObject(streamId);
     // An unknown stream still gates as an internal governance object so a
     // steward reaches the validation errors while everyone else is denied.
     const anchor = object ?? governanceObject({ id: streamId, kind: 'datastream' });
     const world = object ? deps.world : withExtraObjects(deps.world, [anchor]);
-    const verdict = gateAct({ world, clock: deps.clock, policy: deps.policy }, principalId, 'review-data', { kind: 'datastream', id: streamId });
+    const verdict = gateAct({ world, clock: deps.clock, policy: deps.policy }, principalId, 'record-data-issues', { kind: 'datastream', id: streamId });
     if (verdict.ok) return null;
     return { ok: false, status: verdict.status, reason: verdict.reason, detail: verdict.decision.detail ?? '', decision: verdict.decision };
   };
