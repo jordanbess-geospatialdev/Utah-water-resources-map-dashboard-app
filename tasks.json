@@ -593,7 +593,8 @@
         "docs/product/role-permission-amendment.md",
         "docs/verification/role-permissions.md"
       ],
-      "source": "User-authorized roadmap/persona alignment review, 2026-10-21; implements capability separation without resolving owner-specific grants."
+      "source": "User-authorized roadmap/persona alignment review, 2026-10-21; implements capability separation without resolving owner-specific grants.",
+      "merged_commit": "a6c7c835be2369820e2f843cc8754b8d2fca744e"
     }
   ]
 }
